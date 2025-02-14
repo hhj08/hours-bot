@@ -3,7 +3,15 @@ const path = require('node:path');
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
 require('dotenv').config();
 
-const client = new Client({intents: [GatewayIntentBits.Guilds]});
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMessageReactions,
+    ],
+});
 
 client.commands = new Collection();
 const foldersPath = path.join(__dirname, 'commands');

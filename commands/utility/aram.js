@@ -32,16 +32,20 @@ module.exports = {
                 .setRequired(true)),
     async execute(interaction) {
         const gameType = interaction.options.getString('게임유형');
-        const channelID = interaction.options.getString('모집장소')
+        const channelID = interaction.options.getString('모집장소');
         const startTime = interaction.options.getString('시작시간');
         const currentMembers = interaction.options.getString('현인원');
         const isClosed = interaction.options.getString('마감여부');
 
-        const message = `@everyone\n게임모드: 칼바람\n게임유형: ${gameType}\n모집장소: <#${channelID}>\n시작시간: ${startTime}\n현 인 원: ${currentMembers}\n마감여부: ${isClosed}`;
+        const text = `@everyone\n게임모드: 칼바람\n게임유형: ${gameType}\n모집장소: <#${channelID}>\n시작시간: ${startTime}\n현 인 원: ${currentMembers}\n마감여부: ${isClosed}`;
 
-        await interaction.reply({
-            content: message,
+        const message = await interaction.reply({
+            content: text,
+            fetchReply: true,
             allowedMentions: { parse: ['everyone'] },
         });
+
+        await message.react('✅');
+        // await message.react('<rksmd:1339921010883035167:');
     },
 };
