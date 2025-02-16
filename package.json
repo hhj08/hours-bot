@@ -13,6 +13,7 @@
   "dependencies": {
     "discord.js": "^14.17.3",
     "dotenv": "^16.4.7",
+    "moment-timezone": "^0.5.47",
     "mongoose": "^6.13.8",
     "node-cron": "^3.0.3"
   }

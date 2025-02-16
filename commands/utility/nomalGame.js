@@ -89,11 +89,13 @@ module.exports = {
             content: `@everyone ${subNickName}님의 ${gameMode} 구인이 시작되었어요!`,
             embeds: [embed],
             components: [actionRow],
-            allowedMentions: { parse: ['everyone'] }
+            allowedMentions: { parse: ['everyone'] },
+            fetchReply: true
         });
 
         const data = {
             rctsId : message.interaction.id,
+            messageId : message.id,
             owner : { id: interaction.user.id, name: subNickName },
             members : [
                 { id: interaction.user.id, name: subNickName }

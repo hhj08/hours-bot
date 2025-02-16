@@ -1,4 +1,5 @@
 const gameRecruitments = require('../schemas/gameRecruitments');
+const moment = require('moment-timezone');
 
 // 구인정보 저장
 const insertGameRecruitment = async (data) => {
@@ -34,10 +35,22 @@ const removeMember = async (rctsId, memberId) => {
     );
 };
 
+// 오늘의 구인글 목록 반환
+const GameRecruitmentList = async () => {
+    const startOfToday = moment().tz('Asia/Seoul').startOf('day').toDate();
+    const endOfToday = moment().tz('Asia/Seoul').endOf('day').toDate();
+
+    return await gameRecruitments.find({
+        createdAt: { $gte: startOfToday, $lt: endOfToday }
+    });
+}
+
+
 module.exports = {
     insertGameRecruitment,
     findOneRctsId,
     addMember,
     removeMember,
-    updateCurrentMemberCount
+    updateCurrentMemberCount,
+    GameRecruitmentList
 }
