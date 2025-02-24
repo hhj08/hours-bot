@@ -67,7 +67,6 @@ module.exports = {
         const isClosedName = gameIsClosed[minMembers];
         const description = interaction.options.getString('비고') || '';
 
-        // 추가 인원 배열로 관리
         const extraMembers = [];
         for (let i = 1; i <= 4; i++) {
             const extraMember = interaction.options.getUser(`추가인원${i}`);
@@ -76,7 +75,6 @@ module.exports = {
             }
         }
 
-        // 본인 정보
         const userName = interaction.member.nickname || interaction.user.username;
         const lolName = userName.substring(3, userName.length).trim();
 
@@ -102,7 +100,8 @@ module.exports = {
                 { name: '모집장소', value: `<#${channelID}>` },
                 { name: '시작시간', value: startTime },
                 currentMembersField,
-                { name: '마감여부', value: isClosedName }
+                { name: '마감여부', value: isClosedName },
+                { name: '비고', value: description ? description : '없음' }
             )
             .setTimestamp();
 
@@ -112,14 +111,27 @@ module.exports = {
             .setLabel('가능')
             .setStyle(ButtonStyle.Success);
 
+        const holdButton = new ButtonBuilder()
+            .setCustomId('hold')
+            .setLabel('대기')
+            .setStyle(ButtonStyle.Primary);
+
         const cancelButton = new ButtonBuilder()
             .setCustomId('cancel')
             .setLabel('취소')
             .setStyle(ButtonStyle.Danger);
 
+        const boomButton = new ButtonBuilder()
+            .setCustomId('boom')
+            .setLabel('펑')
+            .setStyle(ButtonStyle.Secondary);
+
+
         const actionRow = new ActionRowBuilder()
             .addComponents(joinButton)
-            .addComponents(cancelButton);
+            .addComponents(holdButton)
+            .addComponents(cancelButton)
+            .addComponents(boomButton);
 
         // 메시지 전송
         const message = await interaction.reply({
@@ -130,21 +142,20 @@ module.exports = {
             fetchReply: true
         });
 
-        // 데이터 저장
+        // 데이터베이스 구인글 저장
         const data = {
             interactionId: message.interaction.id,
             messageId: message.id,
             owner: { id: interaction.user.id, name: lolName },
             members: [
-                interaction.user.id, // 호스트 ID 저장
-                ...extraMembers.map(memberId => memberId.replace(/[<@>]/g, '')) // ID만 저장
+                { id: interaction.user.id }, // 모집자 추가
+                ...extraMembers.map(memberId => ({ id: memberId.replace(/[<@>]/g, '') })) // 추가 인원 변환
             ],
             minMembers,
             currentMembers: extraMembers.length + 1,
             startTime,
             channelId: process.env.NOMALCHANNEL,
         };
-
 
         await partyRecruitmentsDao.savePartyRecruitment(data);
     }

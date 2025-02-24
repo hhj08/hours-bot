@@ -7,7 +7,7 @@ const partyRecruitments = new Schema({
     messageId: String,         // Discord 메시지 ID
     owner: Object,           // 파티장 (구인글 작성자)
     subOwner: { type:Object, default: null },        // 추가 파티장 (파티장이 변경된 경우)
-    members: {type:[String], default: null},         // 파티 참여 멤버 목록
+    members: {type:[Object], default: null},         // 파티 참여 멤버 목록
     waitingMembers: {type:[String], default: null},  // 대기 인원 목록
     maxMembers: { type: Number, default: 5 },        // 최대 인원 수
     minMembers: Number,        // 최소 인원 수 - 마감 여부 인원수

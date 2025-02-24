@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
-const gameRecruitmentsDao = require('../../db/dao/gameRecruitmentsDao');
 const { gameIsClosed } = require('../../data/chiocesMap');
+const partyRecruitmentsDao = require('../../db/dao/partyRecruitmentsDao');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -53,16 +53,46 @@ module.exports = {
                     { name: '5미펑', value: '5' },
                     { name: '상시모집', value: '0' }
                 )
+        )
+        .addStringOption(option =>
+            option.setName('비고')
+                .setDescription('즐겜, 빡겜 여부 등 기타 비고 사항 작성')
+        )
+        .addUserOption(option =>
+            option.setName('추가인원1')
+                .setDescription('본인 외의 추가 인원 선택')
+        )
+        .addUserOption(option =>
+            option.setName('추가인원2')
+                .setDescription('본인 외의 추가 인원 선택')
+        )
+        .addUserOption(option =>
+            option.setName('추가인원3')
+                .setDescription('본인 외의 추가 인원 선택')
+        )
+        .addUserOption(option =>
+            option.setName('추가인원4')
+                .setDescription('본인 외의 추가 인원 선택')
         ),
     async execute(interaction) {
         const gameMode = interaction.options.getString('게임모드');
         const channelID = interaction.options.getString('모집장소');
         const startTime = interaction.options.getString('시작시간');
         const tier = interaction.options.getString('구인티어');
-        const isClosed = interaction.options.getString('마감여부');
-        const isClosedName = gameIsClosed[isClosed];
-        const nickname = interaction.member.nickname || interaction.user.username;
-        const subNickName = nickname.substring(3,nickname.length).trim();
+        const minMembers = interaction.options.getString('마감여부');
+        const isClosedName = gameIsClosed[minMembers];
+        const description = interaction.options.getString('비고') || '';
+
+        const extraMembers = [];
+        for (let i = 1; i <= 4; i++) {
+            const extraMember = interaction.options.getUser(`추가인원${i}`);
+            if (extraMember) {
+                extraMembers.push(`<@${extraMember.id}>`);
+            }
+        }
+
+        const userName = interaction.member.nickname || interaction.user.username;
+        const lolName = userName.substring(3, userName.length).trim();
 
         const timeRegex = /^([0-9]|1[0-9]|2[0-3]):([0-5][0-9])$/;
 
@@ -73,88 +103,78 @@ module.exports = {
             });
         }
 
+        if (gameMode === '듀오랭크' && extraMembers.length > 1) {
+            return interaction.reply({
+                content: '⛔ 듀오 랭크는 인원을 1명만 추가할 수 있습니다!',
+                ephemeral: true
+            });
+        }
+
+        const currentMembersField = extraMembers.length > 0
+            ? { name: '현인원', value: `<@${interaction.user.id}>` + ', ' + extraMembers.join(', ') }
+            : { name: '현인원', value: `<@${interaction.user.id}>` };
+
         const embed = new EmbedBuilder()
             .setColor(0x6B66FF)
-            .setTitle(`${subNickName}님의 ${gameMode} 구인`)
+            .setTitle(`${lolName}님의 ${gameMode} 구인`)
             .addFields(
-                { name: '모집장소', value: `<#${channelID}>` }
-            )
-            .addFields(
-                { name: '시작시간', value: startTime }
-            )
-            .addFields(
-                { name: '구인티어', value: tier }
-            )
-            .addFields(
-                { name: '마감여부', value: isClosedName }
+                { name: '모집장소', value: `<#${channelID}>` },
+                { name: '시작시간', value: startTime },
+                currentMembersField,
+                { name: '구인티어', value: tier },
+                { name: '마감여부', value: isClosedName },
+                { name: '비고', value: description ? description : '없음' }
             )
             .setTimestamp();
 
-        const topButton = new ButtonBuilder()
-            .setCustomId('탑')
-            .setLabel('탑')
+        const joinButton = new ButtonBuilder()
+            .setCustomId('rankJoin')
+            .setLabel('가능')
             .setStyle(ButtonStyle.Success);
 
-        const jgButton = new ButtonBuilder()
-            .setCustomId('정글')
-            .setLabel('정글')
-            .setStyle(ButtonStyle.Success);
-
-        const midButton = new ButtonBuilder()
-            .setCustomId('미드')
-            .setLabel('미드')
-            .setStyle(ButtonStyle.Success);
-
-        const adcButton = new ButtonBuilder()
-            .setCustomId('원딜')
-            .setLabel('원딜')
-            .setStyle(ButtonStyle.Success);
-
-        const supButton = new ButtonBuilder()
-            .setCustomId('서폿')
-            .setLabel('서폿')
-            .setStyle(ButtonStyle.Success);
+        const holdButton = new ButtonBuilder()
+            .setCustomId('hold')
+            .setLabel('대기')
+            .setStyle(ButtonStyle.Primary);
 
         const cancelButton = new ButtonBuilder()
             .setCustomId('cancel')
             .setLabel('취소')
             .setStyle(ButtonStyle.Danger);
 
-        const row1 = new ActionRowBuilder()
-            .addComponents(topButton)
-            .addComponents(jgButton)
-            .addComponents(midButton);
+        const boomButton = new ButtonBuilder()
+            .setCustomId('boom')
+            .setLabel('펑')
+            .setStyle(ButtonStyle.Secondary);
 
-
-        const row2 = new ActionRowBuilder()
-            .addComponents(adcButton)
-            .addComponents(supButton)
-            .addComponents(cancelButton);
-
+        const actionRow = new ActionRowBuilder()
+            .addComponents(joinButton)
+            .addComponents(holdButton)
+            .addComponents(cancelButton)
+            .addComponents(boomButton);
 
         const message = await interaction.reply({
-            content: `@everyone ${subNickName}님의 ${gameMode} 구인이 시작되었어요!`,
+            content: `@everyone ${lolName}님의 ${gameMode} 구인이 시작되었어요!`,
             embeds: [embed],
-            components: [row1, row2],
+            components: [actionRow],
             allowedMentions: { parse: ['everyone'] },
             fetchReply: true
         });
 
-        let memberCount = 5;
-        if(gameMode === '듀오랭크')
-            memberCount = 2;
-
         const data = {
-            rctsId : message.interaction.id,
-            messageId : message.id,
-            owner : { id: interaction.user.id, name: subNickName },
-            members : [],
-            memberCount,
-            currentMemberCount : 0,
-            startTime : startTime,
-            gameMode : '랭크',
-            isClosed : isClosed
-        }
-        await gameRecruitmentsDao.insertGameRecruitment(data);
+            interactionId: message.interaction.id,
+            messageId: message.id,
+            owner: { id: interaction.user.id, name: lolName },
+            members: extraMembers.length > 0
+                ? extraMembers.map(memberId => ({ id: memberId.replace(/[<@>]/g, ''), role: 'ALL' }))
+                : [],
+            maxMembers: gameMode === '듀오랭크' ? 2 : 5,
+            minMembers,
+            currentMembers: extraMembers.length + 1,
+            startTime,
+            channelId: process.env.NOMALCHANNEL,
+        };
+
+        await partyRecruitmentsDao.savePartyRecruitment(data);
     }
 };

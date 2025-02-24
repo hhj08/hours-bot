@@ -1,5 +1,5 @@
-const { Events } = require('discord.js');
-const gameRecruitmentsDao = require('../db/dao/gameRecruitmentsDao');
+const { ActionRowBuilder, StringSelectMenuBuilder, Events } = require('discord.js');
+const partyRecruitmentsDao = require('../db/dao/partyRecruitmentsDao');
 
 require('dotenv').config();
 
@@ -54,21 +54,58 @@ module.exports = {
             }
         } else if (interaction.isButton()) {
             const { customId, user, message } = interaction;
-            const rctsId = message.interaction.id;
-            const nickname = interaction.member.nickname || interaction.user.username;
-            const subNickName = nickname.substring(3).trim();
+            const messageId = message.id;
+            const userName = interaction.member.nickname || interaction.user.username;
+            const lolName = userName.substring(3).trim();
+            const interactionUserId = user.id;  //버튼을 누른 사용자 디코 ID
 
-            const gameRecruitmentInfo = await gameRecruitmentsDao.findOneRctsId(rctsId);
-            const { gameMode, members, memberCount, currentMemberCount } = gameRecruitmentInfo;
-            const { id, name } = gameRecruitmentInfo.owner;
-            const isExist = gameRecruitmentInfo.members.some(member => member.id === user.id);
+            const partyRecruitmentData = await partyRecruitmentsDao.findOneMessageId(messageId);
+            // const { members, maxMembers, currentMembers } = partyRecruitmentData;
+            // const ownerId =  partyRecruitmentData.owner.id;
+            // const ownerName =  partyRecruitmentData.owner.name;
 
-            if (['join', '탑', '정글', '미드', '원딜', '서폿'].includes(customId)) {
-                await handleJoin(interaction, rctsId, subNickName, memberCount, currentMemberCount,
-                    isExist, id, name, gameMode, customId, members);
-            } else if (customId === 'cancel') {
-                await handleCancel(interaction, interaction.message.interaction.id, subNickName, memberCount, currentMemberCount,
-                    isExist, id, name, gameMode, members);
+            // const isExist = partyRecruitmentData.members.some(member => member.id === interactionUserId);
+
+            if (interaction.customId === 'rankJoin') {
+                const positionSelect = new StringSelectMenuBuilder()
+                    .setCustomId('position_select')
+                    .setPlaceholder('원하는 포지션을 선택하세요')
+                    .addOptions([
+                        { label: '탑', value: '탑' },
+                        { label: '정글', value: '정글' },
+                        { label: '미드', value: '미드' },
+                        { label: '원딜', value: '원딜' },
+                        { label: '서폿', value: '서폿' }
+                    ]);
+
+                const row = new ActionRowBuilder().addComponents(positionSelect);
+
+                await interaction.reply({
+                    content: '🎯 원하는 포지션을 선택하세요!',
+                    components: [row],
+                    ephemeral: true
+                });
+            }
+            //
+            // if (['join', '탑', '정글', '미드', '원딜', '서폿'].includes(customId)) {
+            //     await handleJoin(interaction, rctsId, subNickName, memberCount, currentMemberCount,
+            //         isExist, id, name, gameMode, customId, members);
+            // } else if (customId === 'cancel') {
+            //     await handleCancel(interaction, interaction.message.interaction.id, subNickName, memberCount, currentMemberCount,
+            //         isExist, id, name, gameMode, members);
+            // }
+        } else if(interaction.isStringSelectMenu()){
+            
+            if (interaction.customId === 'position_select') {
+                const selectedPosition = interaction.values[0];
+
+                await interaction.reply({
+                    content: `✅ **${interaction.user.username}**님이 **${selectedPosition}** 포지션을 선택하셨습니다!`,
+                    ephemeral: true
+                });
+
+                // TODO: 데이터베이스에 저장 (선택 사항)
+                // await partyRecruitmentsDao.updateMemberPosition(interaction.user.id, selectedPosition);
             }
         } else if (interaction.isChatInputCommand()) {
             const command = interaction.client.commands.get(interaction.commandName);
@@ -168,3 +205,4 @@ const handleCancel = async (interaction, rctsId, nickName, memberCount, currentM
 
     await interaction.deferUpdate();
 }
+
