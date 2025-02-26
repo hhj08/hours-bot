@@ -16,6 +16,7 @@ const partyRecruitments = new Schema({
     isClosed: { type: Boolean, default: false },         // 마감 여부 - 최대인원을 충족했을 때 true
     isExploded: { type: Boolean, default: false },       // 펑 여부 (파티 최소 인원 부족으로 파티 터짐)
     channelId: String,         // 채널 ID
+    gameMode: String, //게임모드
     createdAt: {               // 구인글 작성 시간
         type: Date,
         default: () => moment().tz('Asia/Seoul').toDate(),

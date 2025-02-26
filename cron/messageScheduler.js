@@ -1,34 +1,36 @@
 const cron = require("node-cron");
-const gameRecruitmentsDao = require('../db/dao/gameRecruitmentsDao');
-const moment = require('moment-timezone');
+const partyRecruitmentsDao = require('../db/dao/partyRecruitmentsDao');
 
 require('dotenv').config();
 
-const channelIds = {
-    '랭크' : process.env.RANKCHANNEL,
-    '일반' : process.env.NOMALCHANNEL,
-    '기타' : process.env.ETCCHANNEL
-}
-
-// 매분마다 실행 => 펑 된 구인글은 예약되지 않도록 처리해야함..
+// 현재 인원수와 마감 인원수를 비교
+// 현재 인원수가 마감 인원수보다 크면 게임 시작 알람 메시지 전송
+// 현재 인원수가 마감 인원수보다 작으면 펑 알람 메시지 전송
 const schedule = (client) => {
     cron.schedule("* * * * *",  async function() {
-        const nowHour = moment().tz('Asia/Seoul').format('H:mm');
-        const gameRecruitmentList = await gameRecruitmentsDao.GameRecruitmentList();
+        const partyRecruitmentList = await partyRecruitmentsDao.partyRecruitmentList();
 
-        const filteredGames = gameRecruitmentList.filter(game => game.startTime === nowHour);
+        partyRecruitmentList.forEach(async party => {
+            const { minMembers, currentMembers, members, messageId, channelId, gameMode, startTime, owner } = party;
 
-        filteredGames.forEach(async game => {
             let mentionIds = '';
-            game.members.forEach(member => mentionIds += `<@${member.id}>`);
+            members.forEach(member => mentionIds += `<@${member.id}>`);
 
-            const channelId = channelIds[game.gameMode];
             const channel = await client.channels.fetch(channelId);
-
-            const messageId = game.messageId;
             const message = await channel.messages.fetch(messageId);
 
-            await message.reply(`${mentionIds} \n ${nowHour}에 게임이 시작됩니다.`);
+            if(currentMembers >= minMembers) {
+                await message.reply(`${mentionIds} \n ${startTime}에  ${gameMode} 게임이 시작됩니다.`);
+            } else {
+                await message.edit({
+                    content: `@everyone (💣펑) ${owner.name}님의 ${gameMode} 구인이 펑되었습니다.(펑💣)`,
+                    allowedMentions: { parse: ['everyone'] }
+                });
+
+                await message.reply(`${mentionIds} \n💥${owner.name}님의 ${gameMode} 구인이 펑되었습니다.`);
+
+                await partyRecruitmentsDao.updateBoomPartyRecruitment(messageId);
+            }
         })
     });
 }

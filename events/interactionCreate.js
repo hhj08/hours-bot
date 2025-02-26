@@ -1,5 +1,6 @@
 const { ActionRowBuilder, StringSelectMenuBuilder, Events } = require('discord.js');
 const partyRecruitmentsDao = require('../db/dao/partyRecruitmentsDao');
+const { getUserName } = require('../common/commonFunc');
 
 require('dotenv').config();
 
@@ -55,27 +56,48 @@ module.exports = {
         } else if (interaction.isButton()) {
             const { customId, user, message } = interaction;
             const messageId = message.id;
-            const userName = interaction.member.nickname || interaction.user.username;
-            const lolName = userName.substring(3).trim();
-            const interactionUserId = user.id;  //버튼을 누른 사용자 디코 ID
+            const lolName = await getUserName(interaction)
+            const interactionUserId = user.id;  //버튼을 누른 사용자의 디코 ID
 
             const partyRecruitmentData = await partyRecruitmentsDao.findOneMessageId(messageId);
-            // const { members, maxMembers, currentMembers } = partyRecruitmentData;
-            // const ownerId =  partyRecruitmentData.owner.id;
-            // const ownerName =  partyRecruitmentData.owner.name;
+            const { maxMembers, owner, gameMode, members, isClosed } = partyRecruitmentData;
 
-            // const isExist = partyRecruitmentData.members.some(member => member.id === interactionUserId);
+            if(customId === 'join') {
+                const isValid = await checkConditions(interaction, members, isClosed, 'join');
+                if (!isValid) return;
 
-            if (interaction.customId === 'rankJoin') {
+                const addMember = await addMembers(messageId, interactionUserId);
+                await interaction.reply({ content: `${lolName}님이 가능을 눌렀습니다!` });
+
+                if (addMember.currentMembers === maxMembers) {
+                    await interaction.message.edit({
+                        content: `@everyone (😊마감) ${owner.name}님의 ${gameMode}구인이 마감되었습니다!(😊마감)`,
+                        allowedMentions: { parse: ['everyone'] }
+                    });
+
+                    await interaction.message.reply({
+                        content: `<@${owner.id}> ${gameMode} 구인이 마감 되었습니다.`
+                    });
+
+                    await partyRecruitmentsDao.updateBoomOrClosed(messageId, { isClosed : true });
+                }
+                return;
+            }
+
+            if(customId === 'rankJoin') {
+                const isValid = await checkConditions(interaction, members, isClosed, 'join');
+                if (!isValid) return;
+
                 const positionSelect = new StringSelectMenuBuilder()
-                    .setCustomId('position_select')
+                    .setCustomId(`position_select_${interaction.message.id}`) // 원본 메시지 ID 포함
                     .setPlaceholder('원하는 포지션을 선택하세요')
                     .addOptions([
+                        { label: 'ALL', value: 'ALL' },
                         { label: '탑', value: '탑' },
                         { label: '정글', value: '정글' },
                         { label: '미드', value: '미드' },
                         { label: '원딜', value: '원딜' },
-                        { label: '서폿', value: '서폿' }
+                        { label: '서폿', value: '서폿' },
                     ]);
 
                 const row = new ActionRowBuilder().addComponents(positionSelect);
@@ -86,26 +108,127 @@ module.exports = {
                     ephemeral: true
                 });
             }
-            //
-            // if (['join', '탑', '정글', '미드', '원딜', '서폿'].includes(customId)) {
-            //     await handleJoin(interaction, rctsId, subNickName, memberCount, currentMemberCount,
-            //         isExist, id, name, gameMode, customId, members);
-            // } else if (customId === 'cancel') {
-            //     await handleCancel(interaction, interaction.message.interaction.id, subNickName, memberCount, currentMemberCount,
-            //         isExist, id, name, gameMode, members);
-            // }
-        } else if(interaction.isStringSelectMenu()){
-            
-            if (interaction.customId === 'position_select') {
-                const selectedPosition = interaction.values[0];
+
+            if(customId === 'cancel') {
+                const isValid = await checkConditions(interaction, members, isClosed, 'cancel');
+                if (!isValid) return;
+
+                const removeMember = await removeMembers(messageId, interactionUserId);
+
+                const messages = await interaction.message.channel.messages.fetch({ limit: 50 });
+                const userMessage = messages.find(msg => msg.content.includes(`${lolName}님이 가능을 눌렀습니다!`) && msg.author.bot);
+
+                if (userMessage) {
+                    await userMessage.edit({ content: `${lolName}님이 취소했습니다!` });
+                }
+
+                if (removeMember.currentMembers === (maxMembers-1)) {
+                    await interaction.message.edit({
+                        content: `@everyone ${owner.name}님의 ${gameMode} 구인이 시작되었어요!`,
+                        allowedMentions: { parse: ['everyone'] }
+                    });
+
+                    await interaction.message.reply({
+                        content: `<@${owner.id}> 구인 마감이 해제되었습니다.`
+                    });
+                }
+
+                await interaction.deferUpdate();
+            }
+
+            if (customId === 'rankCancel') {
+                const isValid = await checkConditions(interaction, members, isClosed, 'cancel');
+                if (!isValid) return;
+
+                const updateMembers = await removeMembers(messageId, interactionUserId);
+
+                // ✅ 기존 포지션 현황 메시지 삭제
+                const replies = await interaction.message.channel.messages.fetch({ after: messageId });
+                const existingReply = replies.find(msg =>
+                    msg.reference?.messageId === messageId &&
+                    msg.content.startsWith('🎯 현재 포지션 신청 현황')
+                );
+
+                if (existingReply) await existingReply.delete();
+
+                // ✅ 포지션별 유저 정리
+                const roleText = formatRoleText(updateMembers.members);
+
+                // ✅ 새롭게 포지션 현황 메시지 작성
+                const newReply = await interaction.message.reply(`🎯 현재 포지션 신청 현황\n${roleText}`);
+
+                // ✅ 인원이 꽉 찼다가 한 명이 나가면 마감 해제 메시지 추가
+                if (updateMembers.currentMembers === (updateMembers.maxMembers - 1)) {
+                    await interaction.message.reply({
+                        content: `@everyone ${updateMembers.owner.name}님의 ${updateMembers.gameMode} 랭크 구인이 다시 시작되었습니다!`,
+                        allowedMentions: { parse: ['everyone'] }
+                    });
+
+                    await partyRecruitmentsDao.updateBoomOrClosed(messageId, { isClosed: false });
+                }
+
+                await interaction.deferUpdate();
+            }
+
+            if(customId === 'hold') {
+                await partyRecruitmentsDao.addWaitingMembers(messageId, { id:interactionUserId } );
 
                 await interaction.reply({
-                    content: `✅ **${interaction.user.username}**님이 **${selectedPosition}** 포지션을 선택하셨습니다!`,
+                    content: '대기열에 등록되었습니다.',
                     ephemeral: true
                 });
 
-                // TODO: 데이터베이스에 저장 (선택 사항)
-                // await partyRecruitmentsDao.updateMemberPosition(interaction.user.id, selectedPosition);
+            }
+
+        } else if(interaction.isStringSelectMenu()){
+            if (interaction.customId.startsWith('position_select_')) {
+                const selectedPosition = interaction.values[0];
+                const messageId = interaction.customId.replace('position_select_', '');
+                const userId = interaction.user.id;
+
+                try {
+                    // 채널에서 원본 메시지 가져오기
+                    const channel = interaction.channel;
+                    const originalMessage = await channel.messages.fetch(messageId);
+                    if (!originalMessage) {
+                        await interaction.reply({ content: '원본 메시지를 찾을 수 없습니다.', ephemeral: true });
+                        return;
+                    }
+
+                    // ✅ 기존 포지션 현황 메시지 삭제
+                    const replies = await originalMessage.channel.messages.fetch({ after: messageId });
+                    const existingReply = replies.find(msg =>
+                        msg.reference?.messageId === messageId &&
+                        msg.content.startsWith('🎯 현재 포지션 신청 현황')
+                    );
+
+                    if (existingReply) await existingReply.delete();
+
+                    // ✅ 사용자 정보 DB에 저장 (포지션 선택)
+                    const updateMembers = await addMembers(messageId, userId, selectedPosition);
+
+                    // ✅ 포지션별 유저 정리
+                    const roleText = formatRoleText(updateMembers.members);
+
+                    // ✅ 새롭게 포지션 현황 메시지 작성
+                    const newReply = await originalMessage.reply(`🎯 현재 포지션 신청 현황\n${roleText}`);
+
+                    // ✅ 인원이 다 찼다면 마감 메시지 추가
+                    if (updateMembers.currentMembers === updateMembers.maxMembers) {
+                        await originalMessage.reply({
+                            content: `@everyone (😊마감) ${updateMembers.owner.name}님의 ${updateMembers.gameMode} 랭크 구인이 마감되었습니다!(😊마감)`,
+                            allowedMentions: { parse: ['everyone'] }
+                        });
+
+                        await partyRecruitmentsDao.updateBoomOrClosed(messageId, { isClosed: true });
+                    }
+
+                    await interaction.deferUpdate();
+                    await interaction.deleteReply();
+                } catch (error) {
+                    console.error('포지션 선택 중 오류 발생:', error);
+                    await interaction.reply({ content: '포지션 선택 처리 중 오류가 발생했습니다.', ephemeral: true });
+                }
             }
         } else if (interaction.isChatInputCommand()) {
             const command = interaction.client.commands.get(interaction.commandName);
@@ -130,79 +253,55 @@ module.exports = {
     }
 };
 
-const handleJoin = async (interaction, rctsId, nickName, memberCount, currentMemberCount,
-                          isExist, ownerId, ownerName, gameMode, customId, members) => {
-    if (isExist) {
-        await interaction.reply({ content: '🚨 이미 가능을 눌렀습니다!', ephemeral: true });
-        return;
-    }
+const addMembers = async (messageId, memberId, role) => {
+    let newMember = role ? { id: memberId, role } : { id:memberId };
 
-    currentMemberCount ++;
-    if (currentMemberCount > memberCount)
-        await interaction.reply({ content: '🚨 구인이 마감되어 더 이상 가능을 누르실 수 없습니다.', ephemeral: true });
-
-    await gameRecruitmentsDao.updateCurrentMemberCount(interaction.message.interaction.id, currentMemberCount);
-
-    let newMember = {};
-
-    if (gameMode === '랭크') {
-        if(!members.some(member => member.role === customId)) {
-            newMember = { id: interaction.user.id, name: nickName, role: customId };
-            await interaction.reply({ content: `${nickName}님이 ${customId}을 찜했습니다!` });
-        } else {
-            await interaction.reply({ content: '🚨 다른 라인을 선택해주세요!', ephemeral: true });
-        }
-    } else {
-        newMember = { id: interaction.user.id, name: nickName };
-        await interaction.reply({ content: `${nickName}님이 가능을 눌렀습니다!` });
-    }
-
-    await gameRecruitmentsDao.addMember(interaction.message.interaction.id, newMember);
-
-    if (currentMemberCount === memberCount) {
-        await interaction.message.edit({
-            content: `@everyone (😊마감) ${ownerName}님의 구인이 마감되었습니다!(😊마감)`,
-            allowedMentions: { parse: ['everyone'] }
-        });
-        await interaction.message.channel.send(`<@${ownerId}> 구인이 마감 되었습니다.`);
-    }
+    return await partyRecruitmentsDao.addMembers(messageId, newMember);
 }
 
-const handleCancel = async (interaction, rctsId, nickName, memberCount, currentMemberCount,
-                            isExist, ownerId, ownerName, gameMode, members) => {
-    if (!isExist) {
-        await interaction.reply({ content: '🚨 가능을 누르지 않았습니다.', ephemeral: true });
-        return;
-    }
-
-    currentMemberCount --;
-    await gameRecruitmentsDao.updateCurrentMemberCount(rctsId, currentMemberCount);
-
-    const role = members.filter(member => member.id === interaction.user.id).map(item => item.role);
-    const messages = await interaction.message.channel.messages.fetch({ limit: 50 });
-
-    let userMessage = null;
-
-    if (gameMode === '랭크') {
-        userMessage = messages.find(msg => msg.content.includes(`${nickName}님이 ${role}을 찜했습니다!`) && msg.author.bot);
-    } else {
-        userMessage = messages.find(msg => msg.content.includes(`${nickName}님이 가능을 눌렀습니다!`) && msg.author.bot);
-    }
-
-    await gameRecruitmentsDao.removeMember(rctsId, interaction.user.id);
-
-    if (userMessage) {
-        await userMessage.edit({ content: `${nickName}님이 취소했습니다!` });
-    }
-
-    if (currentMemberCount === memberCount - 1) {
-        await interaction.message.edit({
-            content: `@everyone ${nickName}님의 ${gameMode} 구인이 시작되었어요!`,
-            allowedMentions: { parse: ['everyone'] }
-        });
-        await interaction.message.channel.send(`<@${ownerId}> 구인 마감이 해제되었습니다.`);
-    }
-
-    await interaction.deferUpdate();
+const removeMembers = async (messageId, memberId) => {
+    return await partyRecruitmentsDao.removeMembers(messageId, memberId);
 }
 
+const checkConditions = async (interaction, members, isClosed, action) => {
+    const interactionUserId = interaction.user.id;
+
+    if (isClosed && action === 'join') {
+        await interaction.reply({
+            content: '🚨 구인이 마감되어 더 이상 참가할 수 없습니다.',
+            ephemeral: true
+        });
+        return false;
+    }
+
+    const isExist = members.some(member => member.id === interactionUserId);
+    if (isExist && action === 'join') {
+        await interaction.reply({
+            content: '🚨 이미 참가하셨습니다!',
+            ephemeral: true
+        });
+        return false;
+    }
+
+    if(!isExist && action === 'cancel') {
+        await interaction.reply({
+            content: '🚨 가능을 누르지 않았습니다.',
+            ephemeral: true
+        });
+        return false;
+    }
+    return true;
+}
+
+const formatRoleText = (members) => {
+    const roles = ['ALL', '탑', '정글', '미드', '원딜', '서폿'];
+
+    return roles.map(role => {
+        const users = members
+            .filter(member => member.role === role)
+            .map(member => `<@${member.id}>`)
+            .join(', ') || '없음';
+
+        return `**${role}**: ${users}`;
+    }).join('\n');
+};

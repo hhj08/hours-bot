@@ -1,5 +1,6 @@
-const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { gameIsClosed } = require('../../data/chiocesMap');
+const { getUserName, checkTimeRegex, getCurrentMembers, getExtraMembers, setActionRow } = require('../../common/commonFunc');
 const partyRecruitmentsDao = require('../../db/dao/partyRecruitmentsDao');
 
 module.exports = {
@@ -81,26 +82,20 @@ module.exports = {
         const tier = interaction.options.getString('구인티어');
         const minMembers = interaction.options.getString('마감여부');
         const isClosedName = gameIsClosed[minMembers];
-        const description = interaction.options.getString('비고') || '';
+        const description = interaction.options.getString('비고');
+        const extraMembers = await getExtraMembers(interaction); // 추가인원
+        const currentMembersField = await getCurrentMembers(interaction, extraMembers); //현인원
 
-        const extraMembers = [];
-        for (let i = 1; i <= 4; i++) {
-            const extraMember = interaction.options.getUser(`추가인원${i}`);
-            if (extraMember) {
-                extraMembers.push(`<@${extraMember.id}>`);
-            }
-        }
+        // 사용자 닉네임 가져오기
+        const lolName = await getUserName(interaction);
 
-        const userName = interaction.member.nickname || interaction.user.username;
-        const lolName = userName.substring(3, userName.length).trim();
-
-        const timeRegex = /^([0-9]|1[0-9]|2[0-3]):([0-5][0-9])$/;
-
-        if (!timeRegex.test(startTime)) {
-            return interaction.reply({
+        // 시간 정규식 확인
+        if (!checkTimeRegex(startTime)) {
+            await interaction.reply({
                 content: '⛔ 유효한 시간 형식이 아닙니다! 00:00 ~ 23:59 형식으로 입력하세요.',
                 ephemeral: true
             });
+            return;
         }
 
         if (gameMode === '듀오랭크' && extraMembers.length > 1) {
@@ -110,48 +105,22 @@ module.exports = {
             });
         }
 
-        const currentMembersField = extraMembers.length > 0
-            ? { name: '현인원', value: `<@${interaction.user.id}>` + ', ' + extraMembers.join(', ') }
-            : { name: '현인원', value: `<@${interaction.user.id}>` };
+        const fields = [
+            { name: '모집장소', value: `<#${channelID}>` },
+            { name: '시작시간', value: startTime },
+            currentMembersField,
+            { name: '구인티어', value: tier },
+            { name: '마감여부', value: isClosedName },
+            description ? { name: '비고', value: description } : null,
+        ].filter(field => field !== null);
 
         const embed = new EmbedBuilder()
             .setColor(0x6B66FF)
             .setTitle(`${lolName}님의 ${gameMode} 구인`)
-            .addFields(
-                { name: '모집장소', value: `<#${channelID}>` },
-                { name: '시작시간', value: startTime },
-                currentMembersField,
-                { name: '구인티어', value: tier },
-                { name: '마감여부', value: isClosedName },
-                { name: '비고', value: description ? description : '없음' }
-            )
+            .addFields(...fields)
             .setTimestamp();
 
-        const joinButton = new ButtonBuilder()
-            .setCustomId('rankJoin')
-            .setLabel('가능')
-            .setStyle(ButtonStyle.Success);
-
-        const holdButton = new ButtonBuilder()
-            .setCustomId('hold')
-            .setLabel('대기')
-            .setStyle(ButtonStyle.Primary);
-
-        const cancelButton = new ButtonBuilder()
-            .setCustomId('cancel')
-            .setLabel('취소')
-            .setStyle(ButtonStyle.Danger);
-
-        const boomButton = new ButtonBuilder()
-            .setCustomId('boom')
-            .setLabel('펑')
-            .setStyle(ButtonStyle.Secondary);
-
-        const actionRow = new ActionRowBuilder()
-            .addComponents(joinButton)
-            .addComponents(holdButton)
-            .addComponents(cancelButton)
-            .addComponents(boomButton);
+        const actionRow = await setActionRow('rankJoin', 'rankHold', 'rankCancel');
 
         const message = await interaction.reply({
             content: `@everyone ${lolName}님의 ${gameMode} 구인이 시작되었어요!`,
@@ -170,9 +139,10 @@ module.exports = {
                 : [],
             maxMembers: gameMode === '듀오랭크' ? 2 : 5,
             minMembers,
-            currentMembers: extraMembers.length + 1,
+            currentMembers: extraMembers.length > 0 ? extraMembers.length + 1 : 0,
             startTime,
-            channelId: process.env.NOMALCHANNEL,
+            channelId: process.env.RANKCHANNEL,
+            gameMode
         };
 
         await partyRecruitmentsDao.savePartyRecruitment(data);
