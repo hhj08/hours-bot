@@ -1,6 +1,5 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { gameIsClosed } = require('../../data/chiocesMap');
-const { getUserName, checkTimeRegex, getCurrentMembers, getExtraMembers, setActionRow } = require('../../common/commonFunc');
+const { SlashCommandBuilder } = require('discord.js');
+const { getInteractionData, getUserName, checkTimeRegex, setEmbed, setActionRow } = require('../../common/commonFunc');
 const partyRecruitmentsDao = require('../../db/dao/partyRecruitmentsDao');
 
 module.exports = {
@@ -76,15 +75,9 @@ module.exports = {
                 .setDescription('본인 외의 추가 인원 선택')
         ),
     async execute(interaction) {
-        const gameMode = interaction.options.getString('게임모드');
-        const channelID = interaction.options.getString('모집장소');
-        const startTime = interaction.options.getString('시작시간');
-        const tier = interaction.options.getString('구인티어');
-        const minMembers = interaction.options.getString('마감여부');
-        const isClosedName = gameIsClosed[minMembers];
-        const description = interaction.options.getString('비고');
-        const extraMembers = await getExtraMembers(interaction); // 추가인원
-        const currentMembersField = await getCurrentMembers(interaction, extraMembers); //현인원
+        // 상호작용 데이터 가져오기
+        const interactionData = await getInteractionData(interaction);
+        const {gameMode, startTime, minMembers, extraMembers} = interactionData;
 
         // 사용자 닉네임 가져오기
         const lolName = await getUserName(interaction);
@@ -98,6 +91,7 @@ module.exports = {
             return;
         }
 
+        // 듀오 랭크의 경우 인원 추가가 1명만 가능
         if (gameMode === '듀오랭크' && extraMembers.length > 1) {
             return interaction.reply({
                 content: '⛔ 듀오 랭크는 인원을 1명만 추가할 수 있습니다!',
@@ -105,23 +99,13 @@ module.exports = {
             });
         }
 
-        const fields = [
-            { name: '모집장소', value: `<#${channelID}>` },
-            { name: '시작시간', value: startTime },
-            currentMembersField,
-            { name: '구인티어', value: tier },
-            { name: '마감여부', value: isClosedName },
-            description ? { name: '비고', value: description } : null,
-        ].filter(field => field !== null);
+        // 임베드 생성
+        const embed = await setEmbed(interaction, interactionData, lolName);
 
-        const embed = new EmbedBuilder()
-            .setColor(0x6B66FF)
-            .setTitle(`${lolName}님의 ${gameMode} 구인`)
-            .addFields(...fields)
-            .setTimestamp();
-
+        // 버튼 생성
         const actionRow = await setActionRow('rankJoin', 'rankHold', 'rankCancel');
 
+        // 메시지 전송
         const message = await interaction.reply({
             content: `@everyone ${lolName}님의 ${gameMode} 구인이 시작되었어요!`,
             embeds: [embed],
@@ -130,6 +114,7 @@ module.exports = {
             fetchReply: true
         });
 
+        // 데이터베이스 구인글 저장
         const data = {
             interactionId: message.interaction.id,
             messageId: message.id,
@@ -141,7 +126,7 @@ module.exports = {
             minMembers,
             currentMembers: extraMembers.length > 0 ? extraMembers.length + 1 : 0,
             startTime,
-            channelId: process.env.RANKCHANNEL,
+            channelId: process.env.LFP_RANK_GAME,
             gameMode
         };
 

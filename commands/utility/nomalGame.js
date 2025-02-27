@@ -1,7 +1,6 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const partyRecruitmentsDao = require('../../db/dao/partyRecruitmentsDao');
-const { getUserName, checkTimeRegex, getCurrentMembers, getExtraMembers, setActionRow } = require('../../common/commonFunc');
-const { gameIsClosed } = require('../../data/chiocesMap');
+const { getInteractionData, getUserName, checkTimeRegex, setEmbed, setActionRow } = require('../../common/commonFunc');
 
 require('dotenv').config();
 
@@ -61,14 +60,9 @@ module.exports = {
                 .setDescription('본인 외의 추가 인원 선택')
         ),
     async execute(interaction) {
-        const gameMode = interaction.options.getString('게임모드');
-        const channelID = interaction.options.getString('모집장소');
-        const startTime = interaction.options.getString('시작시간');
-        const minMembers = interaction.options.getString('마감여부');
-        const isClosedName = gameIsClosed[minMembers];
-        const description = interaction.options.getString('비고');
-        const extraMembers = await getExtraMembers(interaction); // 추가인원
-        const currentMembersField = await getCurrentMembers(interaction, extraMembers); //현인원
+        // 상호작용 데이터 가져오기
+        const interactionData = await getInteractionData(interaction);
+        const {gameMode, startTime, minMembers, extraMembers} = interactionData;
 
         // 사용자 닉네임 가져오기
         const lolName = await getUserName(interaction);
@@ -82,20 +76,8 @@ module.exports = {
             return;
         }
 
-        const fields = [
-            { name: '모집장소', value: `<#${channelID}>` },
-            { name: '시작시간', value: startTime },
-            currentMembersField,
-            { name: '마감여부', value: isClosedName },
-            description ? { name: '비고', value: description } : null,
-        ].filter(field => field !== null);
-
         // 임베드 생성
-        const embed = new EmbedBuilder()
-            .setColor(0xD1B2FF)
-            .setTitle(`${lolName}님의 ${gameMode} 구인`)
-            .addFields(...fields)
-            .setTimestamp();
+        const embed = await setEmbed(interaction, interactionData, lolName);
 
         // 버튼 생성
         const actionRow = await setActionRow('join', 'hold', 'cancel');
@@ -121,7 +103,7 @@ module.exports = {
             minMembers,
             currentMembers: extraMembers.length + 1,
             startTime,
-            channelId: process.env.NOMALCHANNEL,
+            channelId: process.env.LFP_NORMAL_GAME,
             gameMode
         };
 

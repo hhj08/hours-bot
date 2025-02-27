@@ -13,18 +13,18 @@ module.exports = {
                 const gameMode = interaction.options.getString('게임모드');
                 const choicesMap = {
                     '협곡': [
-                        { name: '일반 1', value: process.env.NOMAL1 },
-                        { name: '일반 2', value: process.env.NOMAL2 },
-                        { name: '일반 3', value: process.env.NOMAL3 }
+                        { name: '일반 1', value: process.env.NORMAL1 },
+                        { name: '일반 2', value: process.env.NORMAL2 },
+                        { name: '일반 3', value: process.env.NORMAL3 }
                     ],
                     '칼바람': [
                         { name: '칼바람나락1', value: process.env.ARAM1 },
                         { name: '칼바람나락2', value: process.env.ARAM2 },
                     ],
                     '자유랭크': [
-                        { name: '자유랭크1', value: process.env.FREE1 },
-                        { name: '자유랭크2', value: process.env.FREE2 },
-                        { name: '자유랭크3', value: process.env.FREE3 }
+                        { name: '자유랭크1', value: process.env.FLEX1 },
+                        { name: '자유랭크2', value: process.env.FLEX2 },
+                        { name: '자유랭크3', value: process.env.FLEX3 }
                     ],
                     '듀오랭크': [
                         { name: '랭크듀오1', value: process.env.DUO1 },
@@ -37,10 +37,10 @@ module.exports = {
                         { name: '롤토체스2', value: process.env.TFT2 },
                     ],
                     '특별게임모드': [
-                        { name: '특별게임모드1', value: process.env.ETC1 },
+                        { name: '특별게임모드1', value: process.env.FEATURED_GAME_MODE },
                     ],
                     '기타': [
-                        { name: '타겜전용', value: process.env.ETC2 },
+                        { name: '타겜전용', value: process.env.ETC_GAME },
                     ]
                 };
 

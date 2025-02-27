@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { getUserName, checkTimeRegex, setActionRow } = require('../../common/commonFunc');
 const partyRecruitmentsDao = require('../../db/dao/partyRecruitmentsDao');
+const { getInteractionData, getUserName, checkTimeRegex, setEmbed, setActionRow } = require('../../common/commonFunc');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -42,13 +42,9 @@ module.exports = {
                 .setDescription('게임의 이름, 롤체 티어 등을 입력')
         ),
     async execute(interaction) {
-        const gameMode = interaction.options.getString('게임모드');
-        const channelID = interaction.options.getString('모집장소');
-        const startTime = interaction.options.getString('시작시간');
-        const maxMembers = interaction.options.getString('모집인원');
-        const minMembers = interaction.options.getString('마감인원');
-        const description = interaction.options.getString('비고');
-
+        // 상호작용 데이터 가져오기
+        const interactionData = await getInteractionData(interaction, 'etc');
+        const {gameMode, startTime, minMembers, maxMembers} = interactionData;
         // 사용자 닉네임 가져오기
         const lolName = await getUserName(interaction);
 
@@ -61,23 +57,13 @@ module.exports = {
             return;
         }
 
-        const fields = [
-            { name: '모집장소', value: `<#${channelID}>` },
-            { name: '시작시간', value: startTime },
-            { name: '현인원', value: `<@${interaction.user.id}>` },
-            { name: '모집인원', value: `${maxMembers}명` },
-            { name: '마감여부', value: `${minMembers}명 미만 펑` },
-            description ? { name: '비고', value: description } : null,
-        ].filter(field => field !== null);
+        // 임베드 생성
+        const embed = await setEmbed(interaction, interactionData, lolName, 'etc');
 
-        const embed = new EmbedBuilder()
-            .setColor(0xD1B2FF)
-            .setTitle(`${lolName}님의 ${gameMode} 구인`)
-            .addFields(...fields)
-            .setTimestamp();
-
+        // 버튼 생성
         const actionRow = await setActionRow('join', 'hold', 'cancel');
 
+        // 메시지 전송
         const message = await interaction.reply({
             content: `@everyone ${lolName}님의 ${gameMode} 구인이 시작되었어요!`,
             embeds: [embed],
@@ -95,7 +81,7 @@ module.exports = {
             minMembers,
             currentMembers: 1,
             startTime,
-            channelId: process.env.ETCCHANNEL,
+            channelId: process.env.LFP_ETC_GAME,
             gameMode
         };
         await partyRecruitmentsDao.savePartyRecruitment(data);
