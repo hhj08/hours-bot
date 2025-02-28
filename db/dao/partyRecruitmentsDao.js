@@ -15,7 +15,7 @@ const findOneMessageId = async (messageId) => {
     return partyRecruitments.findOne({messageId});
 }
 
-// 마감되지 않거나, 펑되지 않은 구인글 찾기
+// 펑 처리를 위한 마감되지 않고, 펑 처리되지 않은 목록 반환
 const findBoomPartyRecruitment = async (ownerId) => {
     return await partyRecruitments.findOne({
         "owner.id": ownerId,
@@ -26,69 +26,29 @@ const findBoomPartyRecruitment = async (ownerId) => {
         .sort({ createdAt: -1 })
 }
 
-// 펑 or 마감 처리
-const updateBoomOrClosed = async (messageId, data) => {
-    await partyRecruitments.updateOne(
-        { messageId },
-        { $set: data }
-    );
-}
-
-// 마감되지 않은 구인글 목록 반환
+// 시작 시간 알람을 위한 목록 찾기
 const partyRecruitmentList = async () => {
     const nowHour = moment().tz('Asia/Seoul').format('H:mm');
     // const nowHour = "22:00";
 
     return await partyRecruitments.find({
-        isClosed: false,
         isExploded: false,
         startTime: nowHour,
         createdAt: { $gte: startOfToday, $lt: endOfToday }
     });
 }
 
-// 가능 누른 참여자 목록 및 현재 인원 업데이트
-const addMembers = async (messageId, newMember) => {
-    return await partyRecruitments.findOneAndUpdate(
-        { messageId },
-        {
-            $push: { members: newMember },
-            $inc: { currentMembers: 1 }
-        },
-        { new: true }
+// 단순히 업데이트만 진행
+const updateMessageId = async (messageId, cond) => {
+    await partyRecruitments.updateOne(
+        { messageId }, cond
     );
 }
-
-// 취소 누른 참여자 목록 및 현재 인원 업데이트
-const removeMembers = async (messageId, memberId) => {
+// MessageId로 업데이트 후 업데이트 된 데이터 반환
+const findOneAndUpdateMessageId = async (messageId, cond) => {
     return await partyRecruitments.findOneAndUpdate(
         { messageId },
-        {
-            $pull: { members: { id: memberId } },
-            $inc: { currentMembers: -1 }
-        },
-        { new: true }
-    );
-}
-
-// 대기자 추가
-const addWaitingMembers = async (messageId, newMember) => {
-    return await partyRecruitments.findOneAndUpdate(
-        { messageId },
-        {
-            $push: { waitingMembers: newMember },
-        },
-        { new: true }
-    );
-}
-
-// 대기자 삭제
-const removeWaitingMembers = async (messageId, newMember) => {
-    return await partyRecruitments.findOneAndUpdate(
-        { messageId },
-        {
-            $pull: { waitingMembers: { id: memberId } },
-        },
+        cond,
         { new: true }
     );
 }
@@ -97,10 +57,7 @@ module.exports = {
     savePartyRecruitment,
     findOneMessageId,
     findBoomPartyRecruitment,
-    updateBoomOrClosed,
+    updateMessageId,
     partyRecruitmentList,
-    addMembers,
-    removeMembers,
-    addWaitingMembers,
-    removeWaitingMembers
+    findOneAndUpdateMessageId
 }

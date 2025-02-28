@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const partyRecruitmentsDao = require('../../db/dao/partyRecruitmentsDao');
-const { getInteractionData, getUserName, checkTimeRegex, setEmbed, setActionRow } = require('../../common/commonFunc');
+const { getInteractionData, getUserName, checkTimeRegex, setEmbed, setActionRow } = require('../../common/commandFunc');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -61,7 +61,7 @@ module.exports = {
         const embed = await setEmbed(interaction, interactionData, lolName, 'etc');
 
         // 버튼 생성
-        const actionRow = await setActionRow('join', 'hold', 'cancel');
+        const actionRow = await setActionRow('join');
 
         // 메시지 전송
         const message = await interaction.reply({

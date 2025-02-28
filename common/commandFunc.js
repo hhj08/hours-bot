@@ -66,19 +66,19 @@ const setEmbed = async (interaction, data, lolName, type) => {
 }
 
 // 버튼
-const setActionRow = async (join, hold, cancel) => {
+const setActionRow = async (join) => {
     const joinButton = new ButtonBuilder()
         .setCustomId(join)
         .setLabel('가능')
         .setStyle(ButtonStyle.Success);
 
-    const holdButton = new ButtonBuilder()
-        .setCustomId(hold)
+    const waitingButton = new ButtonBuilder()
+        .setCustomId('waiting')
         .setLabel('대기')
         .setStyle(ButtonStyle.Primary);
 
     const cancelButton = new ButtonBuilder()
-        .setCustomId(cancel)
+        .setCustomId('cancel')
         .setLabel('취소')
         .setStyle(ButtonStyle.Danger);
 
@@ -89,7 +89,7 @@ const setActionRow = async (join, hold, cancel) => {
 
     return new ActionRowBuilder()
         .addComponents(joinButton)
-        .addComponents(holdButton)
+        .addComponents(waitingButton)
         .addComponents(cancelButton)
         .addComponents(boomButton);
 }

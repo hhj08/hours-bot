@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const partyRecruitmentsDao = require('../../db/dao/partyRecruitmentsDao');
-const { getInteractionData, getUserName, checkTimeRegex, setEmbed, setActionRow } = require('../../common/commonFunc');
+const { getInteractionData, getUserName, checkTimeRegex, setEmbed, setActionRow } = require('../../common/commandFunc');
 
 require('dotenv').config();
 
@@ -80,7 +80,7 @@ module.exports = {
         const embed = await setEmbed(interaction, interactionData, lolName);
 
         // 버튼 생성
-        const actionRow = await setActionRow('join', 'hold', 'cancel');
+        const actionRow = await setActionRow('join');
 
         // 메시지 전송
         const message = await interaction.reply({
@@ -97,8 +97,7 @@ module.exports = {
             messageId: message.id,
             owner: { id: interaction.user.id, name: lolName },
             members: [
-                { id: interaction.user.id }, // 모집자 추가
-                ...extraMembers.map(memberId => ({ id: memberId.replace(/[<@>]/g, '') })) // 추가 인원 변환
+                ...extraMembers.map(memberId => ({ id: memberId, message: null })) // 추가 인원 변환
             ],
             minMembers,
             currentMembers: extraMembers.length + 1,

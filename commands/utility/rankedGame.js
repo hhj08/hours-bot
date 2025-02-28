@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { getInteractionData, getUserName, checkTimeRegex, setEmbed, setActionRow } = require('../../common/commonFunc');
+const { getInteractionData, getUserName, checkTimeRegex, setEmbed, setActionRow } = require('../../common/commandFunc');
 const partyRecruitmentsDao = require('../../db/dao/partyRecruitmentsDao');
 
 module.exports = {
@@ -57,22 +57,6 @@ module.exports = {
         .addStringOption(option =>
             option.setName('비고')
                 .setDescription('즐겜, 빡겜 여부 등 기타 비고 사항 작성')
-        )
-        .addUserOption(option =>
-            option.setName('추가인원1')
-                .setDescription('본인 외의 추가 인원 선택')
-        )
-        .addUserOption(option =>
-            option.setName('추가인원2')
-                .setDescription('본인 외의 추가 인원 선택')
-        )
-        .addUserOption(option =>
-            option.setName('추가인원3')
-                .setDescription('본인 외의 추가 인원 선택')
-        )
-        .addUserOption(option =>
-            option.setName('추가인원4')
-                .setDescription('본인 외의 추가 인원 선택')
         ),
     async execute(interaction) {
         // 상호작용 데이터 가져오기
@@ -103,7 +87,7 @@ module.exports = {
         const embed = await setEmbed(interaction, interactionData, lolName);
 
         // 버튼 생성
-        const actionRow = await setActionRow('rankJoin', 'rankHold', 'rankCancel');
+        const actionRow = await setActionRow('rankJoin');
 
         // 메시지 전송
         const message = await interaction.reply({
@@ -119,9 +103,6 @@ module.exports = {
             interactionId: message.interaction.id,
             messageId: message.id,
             owner: { id: interaction.user.id, name: lolName },
-            members: extraMembers.length > 0
-                ? extraMembers.map(memberId => ({ id: memberId.replace(/[<@>]/g, ''), role: 'ALL' }))
-                : [],
             maxMembers: gameMode === '듀오랭크' ? 2 : 5,
             minMembers,
             currentMembers: extraMembers.length > 0 ? extraMembers.length + 1 : 0,

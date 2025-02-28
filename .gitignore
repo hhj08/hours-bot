@@ -132,3 +132,5 @@ dist
 .idea
 
 credentials.json
+
+.autocp
