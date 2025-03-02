@@ -1,12 +1,9 @@
 const { ActionRowBuilder, StringSelectMenuBuilder, Events, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const partyRecruitmentsDao = require('../db/dao/partyRecruitmentsDao');
 const { getUserName } = require('../common/commandFunc');
+const { removeWaitingMembers } = require('../common/interactionCreateFunc');
 
 require('dotenv').config();
-/*
-TODO: 1. 대기자가 가능 눌렀을 때, 취소 눌렀을 때 동작 & 마감이 풀리면 대기자에게 멘션 보내기
-TODO: 2. 랭크 게임 가능 버튼 기능 구현 필요.
- */
 
 // 가능, 대기, 취소, 펑 버튼을 눌렀을 때의 상호작용 처리
 module.exports = {
@@ -33,6 +30,7 @@ module.exports = {
                 });
             }
 
+            // 가능을 눌렀을 때
             if(customId === 'join') {
                 if(isExist || owner.id === userId) {
                     return await interaction.reply({
@@ -46,6 +44,21 @@ module.exports = {
                         content: '🚨 구인이 마감되어 더 이상 참가할 수 없습니다.',
                         ephemeral: true
                     });
+                }
+
+                // 대기자가 가능을 누르면 대기 목록에서 삭제.
+                if(isWaiting) {
+                    const removeWaitingMessages = await removeWaitingMembers(messageId, userId)
+                    const waitingMessage = await interaction.channel.messages.fetch(waitingMessageId);
+
+                    if(!removeWaitingMessages) {
+                        await waitingMessage.delete();
+                        await partyRecruitmentsDao.updateMessageId(messageId, {
+                            "$set": { waitingMessageId: null }
+                        });
+                    } else {
+                        await waitingMessage.edit({ content: removeWaitingMessages });
+                    }
                 }
 
                 const newMessage = `⭕ ${lolName}님이 가능을 눌렀습니다.`;
@@ -90,8 +103,62 @@ module.exports = {
                 }
             }
 
+            // 랭크 게임 가능 버튼
+            if(customId === 'rankJoin') {
+                if(isExist) {
+                    return await interaction.reply({
+                        content: '🚨 이미 참가하셨습니다!',
+                        ephemeral: true
+                    });
+                }
+
+                if(isWaiting) {
+                    const removeWaitingMessages = await removeWaitingMembers(messageId, userId)
+                    const waitingMessage = await interaction.channel.messages.fetch(waitingMessageId);
+
+                    if(!removeWaitingMessages) {
+                        await waitingMessage.delete();
+                        await partyRecruitmentsDao.updateMessageId(messageId, {
+                            "$set": { waitingMessageId: null }
+                        });
+                    } else {
+                        await waitingMessage.edit({ content: removeWaitingMessages });
+                    }
+                }
+
+                const modal = new ModalBuilder()
+                    .setCustomId(`joinForm_${joinMessageId}`)
+                    .setTitle('포지션 입력');
+
+                const rankDesc = new TextInputBuilder()
+                    .setCustomId(`rankDesc`)
+                    .setLabel('희망 포지션을 입력해주세요')
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder('예: 미드 or 원딜');
+
+                const actionRow = new ActionRowBuilder().addComponents(rankDesc);
+
+                modal.addComponents(actionRow);
+
+                await interaction.showModal(modal);
+            }
+
             // 대기버튼을 눌렀을 떄
             if(customId === 'waiting') {
+                if(userId === owner.id) {
+                    return await interaction.reply({
+                        content: '🚨',
+                        ephemeral: true
+                    });
+                }
+
+                if(isWaiting) {
+                    return await interaction.reply({
+                        content: '🚨 이미 대기중입니다.',
+                        ephemeral: true
+                    });
+                }
+
                 if(isExist) {
                     return await interaction.reply({
                         content: '🚨 이미 참가하여 대기를 할 수 없습니다. 취소 후 대기를 눌러주세요',
@@ -117,9 +184,15 @@ module.exports = {
             }
 
             // 취소 버튼 눌렀을 때
-            // 2. 대기를 누른 참여자가 취소를 원하는지 -> waitingMembers에서 제외하고 waitingMembers의 message 수정 후에 waitingMessage 수정
             if(customId === 'cancel') {
-                if(!isExist) {
+                if(userId === owner.id) {
+                    return await interaction.reply({
+                        content: '🚨 구인글을 펑 시키고 싶을 땐 취소가 아닌 펑을 눌러주세요',
+                        ephemeral: true
+                    });
+                }
+
+                if(!isExist && !isWaiting) {
                     return await interaction.reply({
                         content: '🚨 가능을 누르지 않았습니다.',
                         ephemeral: true
@@ -136,7 +209,16 @@ module.exports = {
                     const allMessages = removeMember.members.map(member => member.message).join('\n');
 
                     const joinMessage = await interaction.channel.messages.fetch(joinMessageId);
-                    await joinMessage.edit({ content: allMessages ? allMessages : '가능을 누른 사람이 없습니다.' });
+
+                    if(!allMessages) {
+                        await joinMessage.delete();
+                        await partyRecruitmentsDao.updateMessageId(messageId, {
+                            "$set": { joinMessageId: null }
+                        });
+                    } else {
+                        await joinMessage.edit({ content: allMessages });
+                    }
+
                     await interaction.reply({
                         content: '취소를 눌러 가능 목록에서 제외 되었습니다.',
                         ephemeral: true
@@ -148,6 +230,14 @@ module.exports = {
                             allowedMentions: { parse: ['everyone'] }
                         });
 
+                        // 대기 중인 사람에게 멘션 보내기
+                        let mentionIds = '';
+                        waitingMembers.forEach(member => mentionIds += `<@${member.id}>`);
+
+                        await interaction.message.reply({
+                            content: `${mentionIds} 마감이 해제되었습니다. 대기 중이신 분은 가능을 눌러주세요`
+                        })
+
                         const closeMessage = await interaction.channel.messages.fetch(closedMessageId);
                         await closeMessage.delete();
 
@@ -155,6 +245,25 @@ module.exports = {
                             "$set": { isClosed: false, closedMessageId: null }
                         });
                     }
+                }
+
+                if(isWaiting) {
+                    const removeWaitingMessages = await removeWaitingMembers(messageId, userId)
+                    const waitingMessage = await interaction.channel.messages.fetch(waitingMessageId);
+
+                    if(!removeWaitingMessages) {
+                        await waitingMessage.delete();
+                        await partyRecruitmentsDao.updateMessageId(messageId, {
+                            "$set": { waitingMessageId: null }
+                        });
+                    } else {
+                        await waitingMessage.edit({ content: removeWaitingMessages });
+                    }
+
+                    await interaction.reply({
+                        content: '취소를 눌러 대기 목록에서 제외 되었습니다.',
+                        ephemeral: true
+                    });
                 }
             }
 
@@ -183,10 +292,6 @@ module.exports = {
                     "$set": { isExploded: true }
                 });
             }
-
-
-        } else if(interaction.isStringSelectMenu()){ // 드롭 박스 이벤트 처리
-
         }
     }
 };
