@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 
 const mongooseConnect = () => {
-    mongoose.connect(process.env.DB_URI);
+    mongoose.connect(process.env.DB);
     const db = mongoose.connection;
 
     db.on("error", (err)=>{
