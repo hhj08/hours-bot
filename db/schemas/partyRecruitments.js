@@ -13,7 +13,7 @@ const partyRecruitments = new Schema({
     waitingMembers: {type:[Object], default: null},  // 대기 인원 목록
     maxMembers: { type: Number, default: 5 },        // 최대 인원 수
     minMembers: Number,        // 최소 인원 수 - 마감 여부 인원수
-    currentMembers: { type: Number, default: 0 },    // 현재 인원 수
+    currentMembers: { type: Number, default: 1 },    // 현재 인원 수
     startTime: String,           // 시작 시간
     isClosed: { type: Boolean, default: false },         // 마감 여부 - 최대인원을 충족했을 때 true
     isExploded: { type: Boolean, default: false },       // 펑 여부 (파티 최소 인원 부족으로 파티 터짐)

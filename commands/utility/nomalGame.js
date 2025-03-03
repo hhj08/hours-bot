@@ -82,9 +82,11 @@ module.exports = {
         // 버튼 생성
         const actionRow = await setActionRow('join');
 
+        const currentMembers = extraMembers.length + 1;
+
         // 메시지 전송
         const message = await interaction.reply({
-            content: `@everyone ${lolName}님의 ${gameMode} 구인이 시작되었어요!`,
+            content: `@everyone (${currentMembers}/5)${lolName}님의 ${gameMode} 구인이 시작되었어요!`,
             embeds: [embed],
             components: [actionRow],
             allowedMentions: { parse: ['everyone'] },
@@ -100,7 +102,7 @@ module.exports = {
                 ...extraMembers.map(memberId => ({ id: memberId, message: null })) // 추가 인원 변환
             ],
             minMembers,
-            currentMembers: extraMembers.length + 1,
+            currentMembers,
             startTime,
             channelId: process.env.LFP_NORMAL_GAME,
             gameMode

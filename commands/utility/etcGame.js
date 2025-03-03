@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const partyRecruitmentsDao = require('../../db/dao/partyRecruitmentsDao');
 const { getInteractionData, getUserName, checkTimeRegex, setEmbed, setActionRow } = require('../../common/commandFunc');
 
@@ -65,7 +65,7 @@ module.exports = {
 
         // 메시지 전송
         const message = await interaction.reply({
-            content: `@everyone ${lolName}님의 ${gameMode} 구인이 시작되었어요!`,
+            content: `@everyone (1/${maxMembers}) ${lolName}님의 ${gameMode} 구인이 시작되었어요!`,
             embeds: [embed],
             components: [actionRow],
             allowedMentions: { parse: ['everyone'] },
@@ -79,7 +79,6 @@ module.exports = {
             members: [{ id: interaction.user.id }],
             maxMembers,
             minMembers,
-            currentMembers: 1,
             startTime,
             channelId: process.env.LFP_ETC_GAME,
             gameMode

@@ -32,7 +32,14 @@ module.exports = {
 
             // 가능을 눌렀을 때
             if(customId === 'join') {
-                if(isExist || owner.id === userId) {
+                if(owner.id === userId) {
+                    return await interaction.reply({
+                        content: '🚨 구인글을 작성한 본인입니다.',
+                        ephemeral: true
+                    });
+                }
+
+                if(isExist) {
                     return await interaction.reply({
                         content: '🚨 이미 참가하셨습니다!',
                         ephemeral: true
@@ -71,9 +78,14 @@ module.exports = {
                 const addMember = await partyRecruitmentsDao.findOneAndUpdateMessageId(messageId, cond);
                 const allMessages = addMember.members.map(member => member.message).join('\n');
 
+                await interaction.message.edit({
+                    content: `@everyone (${addMember.currentMembers}/${addMember.maxMembers})${lolName}님의 ${gameMode} 구인이 진행 중입니다.`,
+                    allowedMentions: { parse: ['everyone'] }
+                });
+
                 if(!joinMessageId) {
                     const replyMessage = await interaction.reply({
-                        content: allMessages,
+                        content: `${allMessages}`,
                         fetchReply: true
                     });
 
@@ -105,6 +117,13 @@ module.exports = {
 
             // 랭크 게임 가능 버튼
             if(customId === 'rankJoin') {
+                if(owner.id === userId) {
+                    return await interaction.reply({
+                        content: '🚨 구인글을 작성한 본인입니다.',
+                        ephemeral: true
+                    });
+                }
+
                 if(isExist) {
                     return await interaction.reply({
                         content: '🚨 이미 참가하셨습니다!',
@@ -210,6 +229,11 @@ module.exports = {
 
                     const joinMessage = await interaction.channel.messages.fetch(joinMessageId);
 
+                    await interaction.message.edit({
+                        content: `@everyone (${removeMember.currentMembers}/${removeMember.maxMembers})${lolName}님의 ${gameMode} 구인이 진행 중입니다.`,
+                        allowedMentions: { parse: ['everyone'] }
+                    });
+
                     if(!allMessages) {
                         await joinMessage.delete();
                         await partyRecruitmentsDao.updateMessageId(messageId, {
@@ -225,11 +249,6 @@ module.exports = {
                     });
 
                     if (removeMember.currentMembers === maxMembers-1) {
-                        await interaction.message.edit({
-                            content: `@everyone ${owner.name}님의 ${gameMode} 구인이 진행중입니다.`,
-                            allowedMentions: { parse: ['everyone'] }
-                        });
-
                         // 대기 중인 사람에게 멘션 보내기
                         let mentionIds = '';
                         waitingMembers.forEach(member => mentionIds += `<@${member.id}>`);

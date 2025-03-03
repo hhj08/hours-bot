@@ -27,21 +27,14 @@ module.exports = {
                 .setRequired(true)
         )
         .addStringOption(option =>
-            option.setName('구인티어')
-                .setDescription('시작 시간 입력 형식 - HH:MM')
+            option.setName('라인')
+                .setDescription('랭크게임에서 본인이 갈 라인 입력')
                 .setRequired(true)
-                .addChoices(
-                    { name: '상관없음', value: '상관없음' },
-                    { name: '아이언', value: '아이언' },
-                    { name: '실버', value: '실버' },
-                    { name: '골드', value: '골드' },
-                    { name: '플레티넘', value: '플레티넘' },
-                    { name: '에멜랄드', value: '에멜랄드' },
-                    { name: '다이아', value: '다이아' },
-                    { name: '마스터', value: '마스터' },
-                    { name: '그랜드마스터', value: '그랜드마스터' },
-                    { name: '챌린저', value: '챌린저' }
-                )
+        )
+        .addStringOption(option =>
+            option.setName('구인티어')
+                .setDescription('구인티어 입력')
+                .setRequired(true)
         )
         .addStringOption(option =>
             option.setName('마감여부')
@@ -61,7 +54,7 @@ module.exports = {
     async execute(interaction) {
         // 상호작용 데이터 가져오기
         const interactionData = await getInteractionData(interaction);
-        const {gameMode, startTime, minMembers, extraMembers} = interactionData;
+        const {gameMode, startTime, minMembers, line } = interactionData;
 
         // 사용자 닉네임 가져오기
         const lolName = await getUserName(interaction);
@@ -75,23 +68,17 @@ module.exports = {
             return;
         }
 
-        // 듀오 랭크의 경우 인원 추가가 1명만 가능
-        if (gameMode === '듀오랭크' && extraMembers.length > 1) {
-            return interaction.reply({
-                content: '⛔ 듀오 랭크는 인원을 1명만 추가할 수 있습니다!',
-                ephemeral: true
-            });
-        }
-
         // 임베드 생성
         const embed = await setEmbed(interaction, interactionData, lolName);
 
         // 버튼 생성
         const actionRow = await setActionRow('rankJoin');
 
+        const maxMembers =  gameMode === '듀오랭크' ? 2 : 5;
+
         // 메시지 전송
         const message = await interaction.reply({
-            content: `@everyone ${lolName}님의 ${gameMode} 구인이 시작되었어요!`,
+            content: `@everyone (1/${maxMembers}) ${lolName}님의 ${gameMode} 구인이 시작되었어요!`,
             embeds: [embed],
             components: [actionRow],
             allowedMentions: { parse: ['everyone'] },
@@ -103,9 +90,8 @@ module.exports = {
             interactionId: message.interaction.id,
             messageId: message.id,
             owner: { id: interaction.user.id, name: lolName },
-            maxMembers: gameMode === '듀오랭크' ? 2 : 5,
+            maxMembers,
             minMembers,
-            currentMembers: extraMembers.length > 0 ? extraMembers.length + 1 : 0,
             startTime,
             channelId: process.env.LFP_RANK_GAME,
             gameMode

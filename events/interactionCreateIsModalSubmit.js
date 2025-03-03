@@ -18,6 +18,8 @@ module.exports = {
             const otherMessageId = interaction.customId.substring(index+1);
 
             if (customId === 'joinForm') {
+
+
                 const rankDesc = interaction.fields.getTextInputValue('rankDesc');
 
                 const newMessage = `${lolName}님 : ${rankDesc}`
@@ -29,6 +31,11 @@ module.exports = {
 
                 const addMember = await partyRecruitmentsDao.findOneAndUpdateMessageId(messageId, cond);
                 const allMessages = addMember.members.map(member => member.message).join('\n');
+
+                await interaction.message.edit({
+                    content: `@everyone (${addMember.currentMembers}/${addMember.maxMembers})${lolName}님의 ${addMember.gameMode} 구인이 진행 중입니다.`,
+                    allowedMentions: { parse: ['everyone'] }
+                });
 
                 if(otherMessageId === 'null' || !otherMessageId) {
                     const replyMessage = await interaction.reply({
