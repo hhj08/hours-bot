@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { getInteractionData, getUserName, checkTimeRegex, setEmbed, setActionRow } = require('../../common/commandFunc');
 const partyRecruitmentsDao = require('../../db/dao/partyRecruitmentsDao');
+const errorHandler = require("../../common/errorHandler");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -52,51 +53,53 @@ module.exports = {
                 .setDescription('즐겜, 빡겜 여부 등 기타 비고 사항 작성')
         ),
     async execute(interaction) {
-        // 상호작용 데이터 가져오기
-        const interactionData = await getInteractionData(interaction);
-        const {gameMode, startTime, minMembers, line } = interactionData;
+        await errorHandler(interaction, async (interaction) => {
+            // 상호작용 데이터 가져오기
+            const interactionData = await getInteractionData(interaction);
+            const {gameMode, startTime, minMembers, line } = interactionData;
 
-        // 사용자 닉네임 가져오기
-        const lolName = await getUserName(interaction);
+            // 사용자 닉네임 가져오기
+            const lolName = await getUserName(interaction);
 
-        // 시간 정규식 확인
-        if (!checkTimeRegex(startTime)) {
-            await interaction.reply({
-                content: '⛔ 유효한 시간 형식이 아닙니다! 00:00 ~ 23:59 형식으로 입력하세요.',
-                ephemeral: true
+            // 시간 정규식 확인
+            if (!checkTimeRegex(startTime)) {
+                await interaction.reply({
+                    content: '⛔ 유효한 시간 형식이 아닙니다! 00:00 ~ 23:59 형식으로 입력하세요.',
+                    ephemeral: true
+                });
+                return;
+            }
+
+            // 임베드 생성
+            const embed = await setEmbed(interaction, interactionData, lolName);
+
+            // 버튼 생성
+            const actionRow = await setActionRow('rankJoin');
+
+            const maxMembers =  gameMode === '듀오랭크' ? 2 : 5;
+
+            // 메시지 전송
+            const message = await interaction.reply({
+                content: `@everyone (1/${maxMembers}) ${lolName}님의 ${gameMode} 구인이 시작되었어요!`,
+                embeds: [embed],
+                components: [actionRow],
+                allowedMentions: { parse: ['everyone'] },
+                fetchReply: true
             });
-            return;
-        }
 
-        // 임베드 생성
-        const embed = await setEmbed(interaction, interactionData, lolName);
+            // 데이터베이스 구인글 저장
+            const data = {
+                interactionId: message.interaction.id,
+                messageId: message.id,
+                owner: { id: interaction.user.id, name: lolName },
+                maxMembers,
+                minMembers,
+                startTime,
+                channelId: process.env.LFP_RANK_GAME,
+                gameMode
+            };
 
-        // 버튼 생성
-        const actionRow = await setActionRow('rankJoin');
-
-        const maxMembers =  gameMode === '듀오랭크' ? 2 : 5;
-
-        // 메시지 전송
-        const message = await interaction.reply({
-            content: `@everyone (1/${maxMembers}) ${lolName}님의 ${gameMode} 구인이 시작되었어요!`,
-            embeds: [embed],
-            components: [actionRow],
-            allowedMentions: { parse: ['everyone'] },
-            fetchReply: true
-        });
-
-        // 데이터베이스 구인글 저장
-        const data = {
-            interactionId: message.interaction.id,
-            messageId: message.id,
-            owner: { id: interaction.user.id, name: lolName },
-            maxMembers,
-            minMembers,
-            startTime,
-            channelId: process.env.LFP_RANK_GAME,
-            gameMode
-        };
-
-        await partyRecruitmentsDao.savePartyRecruitment(data);
+            await partyRecruitmentsDao.savePartyRecruitment(data);
+        })
     }
 };
