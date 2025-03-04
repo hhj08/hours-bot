@@ -28,8 +28,7 @@ const dupRecruitmentCheck = async (ownerId) => {
 
 // 시작 시간 알람을 위한 목록 찾기
 const partyRecruitmentList = async () => {
-    // const nowHour = moment().tz('Asia/Seoul').format('H:mm');
-    const nowHour = "15:30";
+    const nowHour = moment().tz('Asia/Seoul').format('H:mm');
 
     return await partyRecruitments.find({
         isExploded: false,
