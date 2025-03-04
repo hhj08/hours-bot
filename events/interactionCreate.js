@@ -1,5 +1,8 @@
 const { Events } = require('discord.js');
-const errorHandler = require("../common/errorHandler");
+const errorHandler = require('../common/errorHandler');
+const { checkCommandChannel } = require('../common/interactionFunc');
+const partyRecruitmentsDao = require('../db/dao/partyRecruitmentsDao')
+const script = require('../common/script');
 
 require('dotenv').config();
 
@@ -54,6 +57,20 @@ module.exports = {
                 }
 
                 try {
+                    const dupCheck = await  partyRecruitmentsDao.dupRecruitmentCheck(interaction.user.id);
+
+                    console.log('dupCheck >>>>>>>>>>>>>>>>>>>>>> ', dupCheck);
+
+                    if(dupCheck) {
+                        return await interaction.reply({ content: script.warnDup, ephemeral: true });
+                    }
+
+                    const { check, channelId } = await checkCommandChannel(command.data.name, interaction.channelId);
+
+                    if(!check) {
+                        return await interaction.reply({ content: script.warnCommand(channelId), ephemeral: true });
+                    }
+
                     await command.execute(interaction);
                 } catch (error) {
                     console.error(error);

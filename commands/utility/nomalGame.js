@@ -1,7 +1,9 @@
 const { SlashCommandBuilder } = require('discord.js');
 const partyRecruitmentsDao = require('../../db/dao/partyRecruitmentsDao');
 const { getInteractionData, getUserName, checkTimeRegex, setEmbed, setActionRow } = require('../../common/commandFunc');
-const errorHandler = require("../../common/errorHandler");
+const errorHandler = require('../../common/errorHandler');
+const script = require('../../common/script');
+
 
 require('dotenv').config();
 
@@ -72,7 +74,7 @@ module.exports = {
             // 시간 정규식 확인
             if (!checkTimeRegex(startTime)) {
                 await interaction.reply({
-                    content: '⛔ 유효한 시간 형식이 아닙니다! 00:00 ~ 23:59 형식으로 입력하세요.',
+                    content: script.validateTime,
                     ephemeral: true
                 });
                 return;
@@ -88,7 +90,7 @@ module.exports = {
 
             // 메시지 전송
             const message = await interaction.reply({
-                content: `@everyone (${currentMembers}/5)${lolName}님의 ${gameMode} 구인이 시작되었어요!`,
+                content: script.recruit(currentMembers, 5, lolName, gameMode, '구인'),
                 embeds: [embed],
                 components: [actionRow],
                 allowedMentions: { parse: ['everyone'] },

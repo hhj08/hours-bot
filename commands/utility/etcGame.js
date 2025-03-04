@@ -1,7 +1,8 @@
 const { SlashCommandBuilder } = require('discord.js');
 const partyRecruitmentsDao = require('../../db/dao/partyRecruitmentsDao');
 const { getInteractionData, getUserName, checkTimeRegex, setEmbed, setActionRow } = require('../../common/commandFunc');
-const errorHandler = require("../../common/errorHandler");
+const errorHandler = require('../../common/errorHandler');
+const script = require('../../common/script');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -30,12 +31,12 @@ module.exports = {
         )
         .addStringOption(option =>
             option.setName('모집인원')
-                .setDescription('게임에 필요한 최대 인원 수를 입력 숫자만 입력')
+                .setDescription('게임에 필요한 최대 인원 수를 입력 (숫자만 입력)')
                 .setRequired(true)
         )
         .addStringOption(option =>
             option.setName('마감인원')
-                .setDescription('게임 시작에 필요한 최소 인원 수 입력 숫자만 입력')
+                .setDescription('게임 시작에 필요한 최소 인원 수 입력 (숫자만 입력)')
                 .setRequired(true)
         )
         .addStringOption(option =>
@@ -46,14 +47,37 @@ module.exports = {
         await errorHandler(interaction, async (interaction) => {
             // 상호작용 데이터 가져오기
             const interactionData = await getInteractionData(interaction, 'etc');
-            const {gameMode, startTime, minMembers, maxMembers} = interactionData;
+            let { gameMode, startTime, minMembers, maxMembers } = interactionData;
+
+            // 숫자 입력 여부 확인
+            if (isNaN(maxMembers) || isNaN(minMembers)) {
+                await interaction.reply({
+                    content: script.validateMemberCount,
+                    ephemeral: true
+                });
+                return;
+            }
+
+            // 숫자로 변환
+            maxMembers = parseInt(maxMembers, 10);
+            minMembers = parseInt(minMembers, 10);
+
+            // 마감인원이 모집인원보다 클 경우 오류 메시지 출력
+            if (minMembers > maxMembers) {
+                await interaction.reply({
+                    content: script.validateMinMembers,
+                    ephemeral: true
+                });
+                return;
+            }
+
             // 사용자 닉네임 가져오기
             const lolName = await getUserName(interaction);
 
             // 시간 정규식 확인
             if (!checkTimeRegex(startTime)) {
                 await interaction.reply({
-                    content: '⛔ 유효한 시간 형식이 아닙니다! 00:00 ~ 23:59 형식으로 입력하세요.',
+                    content: script.validateTime,
                     ephemeral: true
                 });
                 return;
@@ -67,7 +91,7 @@ module.exports = {
 
             // 메시지 전송
             const message = await interaction.reply({
-                content: `@everyone (1/${maxMembers}) ${lolName}님의 ${gameMode} 구인이 시작되었어요!`,
+                content: script.recruit(1, maxMembers, lolName, gameMode, '구인'),
                 embeds: [embed],
                 components: [actionRow],
                 allowedMentions: { parse: ['everyone'] },
@@ -76,7 +100,7 @@ module.exports = {
 
             const data = {
                 interactionId: message.interaction.id,
-                messageId : message.id,
+                messageId: message.id,
                 owner: { id: interaction.user.id, name: lolName },
                 members: [{ id: interaction.user.id }],
                 maxMembers,
@@ -86,6 +110,6 @@ module.exports = {
                 gameMode
             };
             await partyRecruitmentsDao.savePartyRecruitment(data);
-        })
+        });
     }
 };
