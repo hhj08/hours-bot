@@ -45,28 +45,12 @@ module.exports = {
         .addStringOption(option =>
             option.setName('비고')
                 .setDescription('즐겜, 빡겜 여부 등 기타 비고 사항 작성')
-        )
-        .addUserOption(option =>
-            option.setName('추가인원1')
-                .setDescription('본인 외의 추가 인원 선택')
-        )
-        .addUserOption(option =>
-            option.setName('추가인원2')
-                .setDescription('본인 외의 추가 인원 선택')
-        )
-        .addUserOption(option =>
-            option.setName('추가인원3')
-                .setDescription('본인 외의 추가 인원 선택')
-        )
-        .addUserOption(option =>
-            option.setName('추가인원4')
-                .setDescription('본인 외의 추가 인원 선택')
         ),
     async execute(interaction) {
         await errorHandler(interaction, async (interaction) => {
             // 상호작용 데이터 가져오기
             const interactionData = await getInteractionData(interaction);
-            const {gameMode, startTime, minMembers, extraMembers} = interactionData;
+            const {gameMode, startTime, minMembers } = interactionData;
 
             // 사용자 닉네임 가져오기
             const lolName = await getUserName(interaction);
@@ -102,9 +86,6 @@ module.exports = {
                 interactionId: message.interaction.id,
                 messageId: message.id,
                 owner: { id: interaction.user.id, name: lolName },
-                members: [
-                    ...extraMembers.map(memberId => ({ id: memberId, message: null })) // 추가 인원 변환
-                ],
                 minMembers,
                 currentMembers,
                 startTime,

@@ -59,8 +59,6 @@ module.exports = {
                 try {
                     const dupCheck = await  partyRecruitmentsDao.dupRecruitmentCheck(interaction.user.id);
 
-                    console.log('dupCheck >>>>>>>>>>>>>>>>>>>>>> ', dupCheck);
-
                     if(dupCheck) {
                         return await interaction.reply({ content: script.warnDup, ephemeral: true });
                     }
