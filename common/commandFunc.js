@@ -18,12 +18,8 @@ const getInteractionData = async (interaction, type) => {
     const minMembers = interaction.options.getString(type === 'etc' ? '마감인원' : '마감여부');
     const isClosedName = isClosed[minMembers];
     const description = interaction.options.getString('비고');
-    const extraMembers = [...Array(4)]
-        .map((_, i) => interaction.options.getUser(`추가인원${i + 1}`))
-        .filter(user => user)
-        .map(user => user.id);
 
-    return {gameMode, channelID, startTime, tier, maxMembers, minMembers, isClosedName, description, extraMembers, line};
+    return {gameMode, channelID, startTime, tier, maxMembers, minMembers, isClosedName, description, line};
 }
 
 // 디스코드 닉네임에서 롤 닉네임만 반환
@@ -38,12 +34,6 @@ const checkTimeRegex = (startTime) => {
     return timeRegex.test(startTime);
 };
 
-// 현인원+추가인원
-const getCurrentMembers = async (interaction, extraMembers) => {
-    const members = [`<@${interaction.user.id}>`, ...extraMembers.map(id => `<@${id}>`)];
-    return { name: '현인원', value: members.join(', ') };
-}
-
 // 임베디드 생성
 const setEmbed = async (interaction, data, lolName, type) => {
     const { gameMode, channelID, startTime, tier, extraMembers,
@@ -53,7 +43,7 @@ const setEmbed = async (interaction, data, lolName, type) => {
         { name: '모집장소', value: `<#${channelID
         }>` },
         { name: '시작시간', value: startTime },
-        extraMembers ? await getCurrentMembers(interaction, extraMembers) : null,
+        { name: '현인원', value: lolName },
         line ? {name : '라인', value: line } : null,
         tier? { name: '구인티어', value: tier } : null,
         type === 'etc' ? { name: '모집인원', value: `${maxMembers}명` } : null,
