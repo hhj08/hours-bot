@@ -15,8 +15,8 @@ const findOneMessageId = async (messageId) => {
     return partyRecruitments.findOne({messageId});
 }
 
-// 펑 처리를 위한 마감되지 않고, 펑 처리되지 않은 목록 반환
-const findBoomPartyRecruitment = async (ownerId) => {
+// 구인글 중복 방지
+const dupRecruitmentCheck = async (ownerId) => {
     return await partyRecruitments.findOne({
         "owner.id": ownerId,
         isClosed: false,
@@ -28,8 +28,8 @@ const findBoomPartyRecruitment = async (ownerId) => {
 
 // 시작 시간 알람을 위한 목록 찾기
 const partyRecruitmentList = async () => {
-    const nowHour = moment().tz('Asia/Seoul').format('H:mm');
-    // const nowHour = "22:00";
+    // const nowHour = moment().tz('Asia/Seoul').format('H:mm');
+    const nowHour = "15:30";
 
     return await partyRecruitments.find({
         isExploded: false,
@@ -53,10 +53,11 @@ const findOneAndUpdateMessageId = async (messageId, cond) => {
     );
 }
 
+
 module.exports = {
     savePartyRecruitment,
     findOneMessageId,
-    findBoomPartyRecruitment,
+    dupRecruitmentCheck,
     updateMessageId,
     partyRecruitmentList,
     findOneAndUpdateMessageId
