@@ -69,12 +69,9 @@ module.exports = {
 
             // 버튼 생성
             const actionRow = await setActionRow('join');
-
-            const currentMembers = extraMembers.length + 1;
-
             // 메시지 전송
             const message = await interaction.reply({
-                content: script.recruit(currentMembers, 5, lolName, gameMode, '구인'),
+                content: script.recruit(1, 5, lolName, gameMode, '구인'),
                 embeds: [embed],
                 components: [actionRow],
                 allowedMentions: { parse: ['everyone'] },
@@ -87,7 +84,6 @@ module.exports = {
                 messageId: message.id,
                 owner: { id: interaction.user.id, name: lolName },
                 minMembers,
-                currentMembers,
                 startTime,
                 channelId: process.env.LFP_NORMAL_GAME,
                 gameMode
