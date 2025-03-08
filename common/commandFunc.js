@@ -35,8 +35,8 @@ const checkTimeRegex = (startTime) => {
 };
 
 // 임베디드 생성
-const setEmbed = async (interaction, data, lolName, type) => {
-    const { gameMode, channelID, startTime, tier, extraMembers,
+const setEmbed = async (interaction, data, lolName, type, color) => {
+    const { gameMode, channelID, startTime, tier,
         isClosedName, description, maxMembers, minMembers, line} = data;
 
     const fields = [
@@ -52,7 +52,7 @@ const setEmbed = async (interaction, data, lolName, type) => {
     ].filter(field => field !== null);
     
     return new EmbedBuilder()
-        .setColor(0xD1B2FF)
+        .setColor(color) // 0xD1B2FF
         .setTitle(`${lolName}님의 ${gameMode} 구인`)
         .addFields(...fields)
         .setTimestamp();

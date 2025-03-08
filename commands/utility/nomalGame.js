@@ -13,7 +13,7 @@ module.exports = {
         .setDescription('일반 게임 모집')
         .addStringOption(option =>
             option.setName('게임모드')
-                .setDescription('게임 모드 선택')
+                .setDescription('게임 모드를 선택하세요. 일반/칼바람이 상관없다면 비고란에 추가로 기재해주세요.')
                 .setRequired(true)
                 .addChoices(
                     { name: '협곡', value: '협곡' },
@@ -22,18 +22,18 @@ module.exports = {
         )
         .addStringOption(option =>
             option.setName('모집장소')
-                .setDescription('게임이 시작되는 음성채널 선택')
+                .setDescription('몇번 음성채널에서 게임하실 예정이신가요? 게임모드에 맞는 음성채팅방을 이용해주세요.')
                 .setRequired(true)
                 .setAutocomplete(true)
         )
         .addStringOption(option =>
             option.setName('시작시간')
-                .setDescription('시작 시간 입력 형식 - HH:MM')
+                .setDescription('시작시간을 24시간 형식으로 적어주세요 (ex. 14:45) ')
                 .setRequired(true)
         )
         .addStringOption(option =>
             option.setName('마감여부')
-                .setDescription('마감 여부 선택')
+                .setDescription('최소 출발 인원을 선택해주세요. 만약 인원 상관없이 시작시간에 출발하신다면 상시모집을 선택해주세요. ')
                 .setRequired(true)
                 .addChoices(
                     { name: '2미펑', value: '2' },
@@ -44,7 +44,7 @@ module.exports = {
         )
         .addStringOption(option =>
             option.setName('비고')
-                .setDescription('즐겜, 빡겜 여부 등 기타 비고 사항 작성')
+                .setDescription('즐겜, 빡겜 여부 혹은 일반/칼바람 병행여부 등 파티원에게 공지하고 싶은 내용을 기재해주세요.')
         ),
     async execute(interaction) {
         await errorHandler(interaction, async (interaction) => {
@@ -65,7 +65,7 @@ module.exports = {
             }
 
             // 임베드 생성
-            const embed = await setEmbed(interaction, interactionData, lolName);
+            const embed = await setEmbed(interaction, interactionData, lolName, null, 0xF15F5F);
 
             // 버튼 생성
             const actionRow = await setActionRow('join');

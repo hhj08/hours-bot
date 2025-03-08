@@ -10,7 +10,7 @@ module.exports = {
         .setDescription('기타 게임 모집')
         .addStringOption(option =>
             option.setName('게임모드')
-                .setDescription('롤토체스, 기타, 특별게임모드')
+                .setDescription('게임 모드를 선택하세요. 기타 게임의 이름은 비고란에 추가로 기재해 주세요.')
                 .setRequired(true)
                 .addChoices(
                     { name: '롤토체스', value: '롤토체스' },
@@ -20,28 +20,28 @@ module.exports = {
         )
         .addStringOption(option =>
             option.setName('모집장소')
-                .setDescription('게임이 시작되는 음성채널 선택')
+                .setDescription('몇번 음성채널에서 게임하실 예정이신가요? 게임모드에 맞는 음성채팅방을 이용해주세요.')
                 .setRequired(true)
                 .setAutocomplete(true)
         )
         .addStringOption(option =>
             option.setName('시작시간')
-                .setDescription('시작 시간 입력 형식 - HH:MM')
+                .setDescription('시작시간을 24시간 형식으로 적어주세요 (ex. 14:45) ')
                 .setRequired(true)
         )
         .addStringOption(option =>
             option.setName('모집인원')
-                .setDescription('게임에 필요한 최대 인원 수를 입력 (숫자만 입력)')
+                .setDescription('몇명을 모집할 예정인가요? 모집 인원을 숫자만 입력해주세요')
                 .setRequired(true)
         )
         .addStringOption(option =>
             option.setName('마감인원')
-                .setDescription('게임 시작에 필요한 최소 인원 수 입력 (숫자만 입력)')
+                .setDescription('몇 명이 모이면 시작할 예정인가요? 최소 인원을 숫자만 입력해주세요.')
                 .setRequired(true)
         )
         .addStringOption(option =>
             option.setName('비고')
-                .setDescription('게임의 이름, 롤체 티어 등을 입력')
+                .setDescription('즐겜, 빡겜 여부 혹은 파티원에게 공지하고 싶은 내용을 기재해주세요.')
         ),
     async execute(interaction) {
         await errorHandler(interaction, async (interaction) => {
@@ -84,7 +84,7 @@ module.exports = {
             }
 
             // 임베드 생성
-            const embed = await setEmbed(interaction, interactionData, lolName, 'etc');
+            const embed = await setEmbed(interaction, interactionData, lolName, 'etc', 0x9FC93C);
 
             // 버튼 생성
             const actionRow = await setActionRow('join');

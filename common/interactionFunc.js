@@ -17,7 +17,7 @@ const handleJoin = async (interaction, lolName, type, position, joinMessageId, m
 
     const allMessages = addMember.members.map(member => member.message).join('\n');
     await interaction.message.edit({
-        content: script.recruit(currentMembers, maxMembers, lolName, gameMode, '가능'),
+        content: script.recruit(currentMembers, maxMembers, owner.name, gameMode, '가능'),
         allowedMentions: { parse: ['everyone'] }
     });
 
@@ -32,7 +32,7 @@ const handleJoin = async (interaction, lolName, type, position, joinMessageId, m
 
     if (currentMembers === maxMembers) {
         await interaction.message.edit({
-            content: script.done(owner.name, gameMode, process.env.DONE_EMOJI, '마감'),
+            content: script.done(owner.name, gameMode, '(😊마감)', '마감'),
             allowedMentions: { parse: ['everyone'] }
         });
 
@@ -65,13 +65,13 @@ const removeUserFromWaiting = async (interaction, messageId, waitingMessageId, u
     }
 }
 
-const showModal = async (interaction, customId, title, inputId, placeholder) => {
+const showModal = async (interaction, customId, title, subTitle, inputId, placeholder) => {
     const modal = new ModalBuilder()
         .setCustomId(customId)
         .setTitle(title);
 
     const input = new TextInputBuilder()
-        .setCustomId(inputId).setLabel(title)
+        .setCustomId(inputId).setLabel(subTitle)
         .setStyle(TextInputStyle.Short)
         .setPlaceholder(placeholder);
 
