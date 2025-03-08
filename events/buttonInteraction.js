@@ -17,7 +17,7 @@ module.exports = {
             const { message, customId, user } = interaction;
             const messageId = message.id; // 원글 메시지 ID
             const userId= user.id; // 버튼을 누른 사용자 디코 ID
-            const lolName = getUserName(interaction); // 디스코드 닉네임에서 롤닉만 추출
+            const lolName = await getUserName(interaction); // 디스코드 닉네임에서 롤닉만 추출
 
             // MessageID로 구인글 정보 찾아오기
             let recruitment = await partyRecruitmentsDao.findOneMessageId(messageId);
@@ -64,7 +64,7 @@ module.exports = {
                 await removeUserFromWaiting(interaction, messageId, waitingMessageId, userId);
 
                 if(customId === 'rankJoin')
-                    return await showModal(interaction, `joinForm_${joinMessageId}`, '포지션 입력', 'rankDesc', '예: 미드 or 원딜');
+                    return await showModal(interaction, `joinForm_${joinMessageId}`, '랭크 포지션 입력 창', '가능한 포지션을 모두 적어주세요 ', 'rankDesc', '예: 예시 : 탑, 미드, 정글');
 
                 await handleJoin(interaction, lolName, 'normal', null, joinMessageId, messageId);
             }
@@ -92,7 +92,7 @@ module.exports = {
                         ephemeral: true
                     });
 
-                await showModal(interaction, `waitingForm_${waitingMessageId}`, '대기 사유를 입력해주세요', 'waitingReason', '예: 30분 뒤 참가');
+                await showModal(interaction, `waitingForm_${waitingMessageId}`, '대기 사유', '대기가 가능한 시간을 적어주세요 (랭크 게임의 경우 포지션도 같이 적어주세요)', 'waitingReason', '예시 :  17:00 ~ 18:00 대기 가능 / 탑, 미드, 원딜 ');
             }
 
             //취소
@@ -125,7 +125,7 @@ module.exports = {
                     const joinMessage = await interaction.channel.messages.fetch(joinMessageId);
 
                     await interaction.message.edit({
-                        content: script.recruit(removeMember.currentMembers, removeMember.maxMembers, lolName, gameMode, '취소'),
+                        content: script.recruit(removeMember.currentMembers, removeMember.maxMembers, removeMember.owner.name, gameMode, '취소'),
                         allowedMentions: { parse: ['everyone'] }
                     });
 
@@ -183,7 +183,7 @@ module.exports = {
                 members.forEach(member => mentionIds += `<@${member.id}>`);
 
                 await interaction.message.edit({
-                    content: script.done(owner.name, gameMode, process.env.BOOM_EMOJI, '취소'),
+                    content: script.done(owner.name, gameMode, '(펑💣)', '취소'),
                     allowedMentions: { parse: ['everyone'] }
                 });
 
