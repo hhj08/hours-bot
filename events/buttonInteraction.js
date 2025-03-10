@@ -145,12 +145,14 @@ module.exports = {
 
                     if (removeMember.currentMembers === maxMembers-1) {
                         // 대기 중인 사람에게 멘션 보내기
-                        let mentionIds = '';
-                        waitingMembers.forEach(member => mentionIds += `<@${member.id}>`);
+                        if(waitingMembers.length > 0) {
+                            let mentionIds = '';
+                            waitingMembers.forEach(member => mentionIds += `<@${member.id}>`);
 
-                        await interaction.message.reply({
-                            content: script.waitMention(mentionIds)
-                        })
+                            await interaction.message.reply({
+                                content: script.waitMention(mentionIds)
+                            })
+                        }
 
                         const closeMessage = await interaction.channel.messages.fetch(closedMessageId);
                         await closeMessage.delete();
