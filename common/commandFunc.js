@@ -15,7 +15,7 @@ const getInteractionData = async (interaction, type) => {
     const line = interaction.options.getString('라인');
     const tier = interaction.options.getString('구인티어');
     const maxMembers = interaction.options.getString('모집인원');
-    const minMembers = interaction.options.getString(type === 'etc' ? '마감인원' : '마감여부');
+    const minMembers = interaction.options.getString('마감인원');
     const isClosedName = isClosed[minMembers];
     const description = interaction.options.getString('비고');
 
@@ -47,7 +47,7 @@ const setEmbed = async (interaction, data, lolName, type, color) => {
         line ? {name : '라인', value: line } : null,
         tier? { name: '구인티어', value: tier } : null,
         type === 'etc' ? { name: '모집인원', value: `${maxMembers}명` } : null,
-        type !== 'etc' ? { name: '마감여부', value: isClosedName } : { name: '마감인원', value: `${minMembers}명 미만 펑` },
+        type !== 'etc' ? { name: '마감인원', value: isClosedName } : { name: '마감인원', value: `${minMembers}명 미만 펑` },
         description ? { name: '비고', value: description } : null,
     ].filter(field => field !== null);
     
