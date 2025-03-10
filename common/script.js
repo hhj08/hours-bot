@@ -1,7 +1,7 @@
 module.exports = {
     recruit : (currMember, maxMember, ownerName, gameMode, type) => `@everyone\n(${currMember}/${maxMember}) ${ownerName}님의 ${gameMode} 구인이 ${type === '구인' ? '시작되었어요.' : '진행 중이에요.'}\n [가능]을 눌러 참가해보세요`,
     done : (ownerName, gameMode, emoji, type) => `@everyone\n${emoji} ${ownerName}님의 ${gameMode} 구인이 ${type === '마감' ? '마감되었어요!' : '취소되었어요'} ${emoji}`,
-    ownerMention1 : (ownerId, gameMode) => `${ownerId} ${gameMode} 구인이 마감되었어요. 빠른 시작을 원하시면 팀원들을 태그해 조정해보세요.`,
+    ownerMention1 : (ownerId, gameMode) => `<@${ownerId}> ${gameMode} 구인이 마감되었어요. 빠른 시작을 원하시면 팀원들을 태그해 조정해보세요.`,
     boomMention : (mentionIds, ownerName, gameMode) => `${mentionIds}\n💥${ownerName}님의 ${gameMode} 파티는 구인이 취소되어 진행되지 않아요. 게임참여를 원하시면 직접 파티를 만들어보세요. `,
     waitMention : (mentionIds) => `${mentionIds}\n마감이 해제되었어요. 게임 참여를 원하시면 가능을 눌러주세요!`,
     validateTime : `⛔ 시간은 0:00 ~ 23:59 형식으로 입력해주세요.`,

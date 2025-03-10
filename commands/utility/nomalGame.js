@@ -32,7 +32,7 @@ module.exports = {
                 .setRequired(true)
         )
         .addStringOption(option =>
-            option.setName('마감여부')
+            option.setName('마감인원')
                 .setDescription('최소 출발 인원을 선택해주세요. 만약 인원 상관없이 시작시간에 출발하신다면 상시모집을 선택해주세요. ')
                 .setRequired(true)
                 .addChoices(
