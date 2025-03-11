@@ -102,7 +102,6 @@ module.exports = {
                 interactionId: message.interaction.id,
                 messageId: message.id,
                 owner: { id: interaction.user.id, name: lolName },
-                members: [{ id: interaction.user.id }],
                 maxMembers,
                 minMembers,
                 startTime,
