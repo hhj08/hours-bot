@@ -174,28 +174,30 @@ module.exports = {
             }
 
             if(customId === 'boom') {
-                // 구인글 작성자가 아닌 다른 사용자가 펑을 눌렀을 때
-                if(owner.id !== userId)
+                const managerIds = [process.env.MANAGER_ID1, process.env.MANAGER_ID2, process.env.MANAGER_ID3, process.env.MANAGER_ID4];
+                
+                if(owner.id === userId || managerIds.includes(userId)) {
+                    let mentionIds = [];
+                    members.forEach(member => mentionIds += `<@${member.id}>`);
+
+                    await interaction.message.edit({
+                        content: script.done(owner.name, gameMode, '(펑💣)', '취소'),
+                        allowedMentions: { parse: ['everyone'] }
+                    });
+
+                    await interaction.reply({
+                        content: script.boomMention(mentionIds, owner.name, gameMode),
+                    });
+
+                    await partyRecruitmentsDao.updateMessageId(messageId, {
+                        "$set": { isExploded: true }
+                    });
+                } else {
                     return await interaction.reply({
                         content: script.warnBoom,
                         ephemeral: true
                     });
-
-                let mentionIds = [];
-                members.forEach(member => mentionIds += `<@${member.id}>`);
-
-                await interaction.message.edit({
-                    content: script.done(owner.name, gameMode, '(펑💣)', '취소'),
-                    allowedMentions: { parse: ['everyone'] }
-                });
-
-                await interaction.reply({
-                    content: script.boomMention(mentionIds, owner.name, gameMode),
-                });
-
-                await partyRecruitmentsDao.updateMessageId(messageId, {
-                    "$set": { isExploded: true }
-                });
+                }
             }
         })
     }
